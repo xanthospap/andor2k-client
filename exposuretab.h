@@ -6,8 +6,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QWidget>
-
-#include <QWidget>
+#include <QComboBox>
 
 class ExposureTab : public QWidget {
   Q_OBJECT
@@ -23,6 +22,7 @@ private:
   QLineEdit *m_exposure_ledit;
   QLineEdit *m_nimages_ledit;
   QLineEdit *m_binning_ledit;
+  QComboBox *m_type_cbox;
   QLabel *m_label;
   QGridLayout *m_layout;
 
