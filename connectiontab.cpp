@@ -1,23 +1,35 @@
 #include "connectiontab.h"
 #include "helmos-andor2k/cpp_socket.hpp"
 #include <QRegularExpressionValidator>
+#include <QMessageBox>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
-ConnectionTab::ConnectionTab(ClientSocket *csocket, QWidget *parent)
+ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
+  printf("[DEBUG][ANDOR2K::client::%15s] Constructing ConnectionTab\n", __func__);
+  
   createGui();
   setLayout(v_main_layout);
-  csock = csocket;
+  csock = &csocket;
   connect(m_connect_button, SIGNAL(clicked()), this, SLOT(sock_connect()));
   connect(m_defaults_button, SIGNAL(clicked()), this, SLOT(reset_defaults()));
+  connect(m_disconnect_button, SIGNAL(clicked()), this, SLOT(disconnect()));
+  
+  printf("[DEBUG][ANDOR2K::client::%15s] ConnectionTab Socket at %p -> %p", __func__, &csock, csock);
+  if (*csock)
+    printf(" -> %p\n", *csock);
+  else
+    printf(" -> nowhere!\n");
+  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ConnectionTab\n", __func__);
 }
 
 void ConnectionTab::createGui() {
   m_hostname_ledit = new QLineEdit;
   m_hostname_ledit->setPlaceholderText("Hostname IP");
   m_hostname_ledit->setText("localhost");
+  m_hostname_ledit->setToolTip("Hostname where ANDOR2K daemon is running");
 
   m_port_ledit = new QLineEdit;
   m_port_ledit->setPlaceholderText("Listening Port On Host");
@@ -26,6 +38,7 @@ void ConnectionTab::createGui() {
       "\\d{3,5}"); /* only allow integers in range [100-99999] */
   QValidator *validator = new QRegularExpressionValidator(rx, this);
   m_port_ledit->setValidator(validator);
+  m_port_ledit->setToolTip("Port to connect on for ANDOR2K daemon");
 
   m_connect_button = new QPushButton("Connect");
   m_connect_button->setEnabled(true);
@@ -53,15 +66,30 @@ void ConnectionTab::createGui() {
 }
 
 void ConnectionTab::sock_connect() {
+  if (*csock) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error", "Already Connected!");
+    msbox.exec();
+    return;
+  }
+
   std::string host = m_hostname_ledit->text().toStdString();
   try {
-    csock = new ClientSocket(host.c_str(), m_port_ledit->text().toInt());
+    *csock = new ClientSocket(host.c_str(), m_port_ledit->text().toInt());
   } catch (std::exception &e) {
-    csock = nullptr;
+    *csock = nullptr;
+    QMessageBox messageBox(QMessageBox::Critical, "Connection Error", "Could not connect to daemon!");
+    messageBox.exec();
     return;
   }
   m_connect_button->setEnabled(false);
   m_disconnect_button->setEnabled(true);
+  
+  printf("[DEBUG][ANDOR2K::client::%15s] Socket points to: ", __func__);
+  if (*csock) {
+    printf("%p -> %p\n", csock, *csock);
+  } else {
+    printf(" nowhere!\n");
+  }
 }
 
 void ConnectionTab::reset_defaults() {
@@ -71,8 +99,8 @@ void ConnectionTab::reset_defaults() {
 }
 
 void ConnectionTab::disconnect() {
-  csock->close_socket();
-  csock = nullptr;
+  (*csock)->close_socket();
+  *csock = nullptr;
   m_connect_button->setEnabled(true);
   m_disconnect_button->setEnabled(false);
 }

@@ -11,13 +11,13 @@
 class ConnectionTab : public QWidget {
   Q_OBJECT
 public:
-  explicit ConnectionTab(andor2k::ClientSocket *sock,
+  explicit ConnectionTab(andor2k::ClientSocket *&sock,
                          QWidget *parent = nullptr);
 
 private:
   void createGui();
 
-  andor2k::ClientSocket *csock = nullptr;
+  andor2k::ClientSocket **csock;
 
   QPushButton *m_connect_button;
   QPushButton *m_disconnect_button;

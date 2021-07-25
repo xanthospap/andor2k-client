@@ -27,3 +27,5 @@ HEADERS += \
 unix|win32: LIBS += -landor
 
 unix|win32: LIBS += -lhelmosandor2k
+
+unix|win32: LIBS += -lcfitsio
