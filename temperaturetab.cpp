@@ -58,6 +58,13 @@ void TemperatureTab::set_temperature() {
     printf(" nowhere!\n");
   }
 
+  /* check that the connection/socket is alive */
+  if (*csock == nullptr) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error", "Cannot send command to daemon! Need to connect first");
+    msbox.exec();
+    return;
+  }
+
   /* check if user has passed in a temperature value */
   if (m_set_temp_ledit->text().isEmpty()) {
     QMessageBox msbox(QMessageBox::Critical, "Empty Value", "Must provide a valid temperature value!");

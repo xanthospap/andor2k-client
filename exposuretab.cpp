@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QStringList>
 #include <QGroupBox>
+#include <QMessageBox>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -25,7 +26,7 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *pa
 }
 
 void ExposureTab::set_exposure() {
-  this->make_command(this->buffer);
+  if ( this->make_command(this->buffer) ) return;
   /* send command to deamon */
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__, buffer);
   (*csock)->send(buffer);
@@ -36,6 +37,35 @@ int ExposureTab::make_command(char *buffer) {
   std::memset(buffer, '\0', 1024);
   std::strcpy(buffer+idx, "image ");
   idx = std::strlen(buffer);
+
+  /* check for empty edits */
+  char error_msg[128];
+  std::memset(error_msg, 0, 128);
+  int error = 0;
+  if (m_filename_ledit->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Image filename cannot be empty!");
+  } else if (m_exposure_ledit->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Exposure cannot be empty!");
+  } else if (m_nimages_ledit->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Number of Images cannot be empty!");
+  } else if (m_vbin_ledit->text().isEmpty() || m_hbin_ledit->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Vertical/Horizontal binning cannot be empty!");
+  } else if (m_vstart_pix->text().isEmpty() || m_vend_pix->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Vertical start/end pixels cannot be empty!");
+  } else if (m_hstart_pix->text().isEmpty() || m_hend_pix->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Horizontal start/end pixels cannot be empty!");
+  }
+  if (error) {
+    QMessageBox msbox(QMessageBox::Critical, "Exposure Options Error", error_msg);
+    msbox.exec();
+    return error;
+  }
 
   /* filename */
   std::strcpy(buffer+idx, "--filename ");
@@ -140,6 +170,13 @@ void ExposureTab::createGui() {
   m_hstart_pix = new QLineEdit;
   m_vend_pix = new QLineEdit;
   m_hend_pix = new QLineEdit;
+
+  /* options for NumImages edit */
+  QRegularExpression rx_ni("[0-9]{1,3}");
+  QValidator *validator_ni = new QRegularExpressionValidator(rx_ni, this);
+  m_nimages_ledit->setValidator(validator_ni);
+  m_nimages_ledit->setToolTip("Number of images/exposures to be performed in run.");
+  m_nimages_ledit->setText("1");
   
   /* options for Filename edit */
   QRegularExpression rx_fn(
@@ -147,6 +184,7 @@ void ExposureTab::createGui() {
   QValidator *validator_fn = new QRegularExpressionValidator(rx_fn, this);
   m_filename_ledit->setValidator(validator_fn);
   m_filename_ledit->setToolTip("Type in the filename of the exposure(s).\nDo not include path or the \".fits\" extension\nNote that the filename typed in here, will be augmented by the\ndate string (aka \"YYYYMMDD\" and a serial number starting from 1");
+  m_filename_ledit->setText("img");
   
   /* options for Exposure edit */
   QRegularExpression rx_ex(
@@ -154,6 +192,7 @@ void ExposureTab::createGui() {
   QValidator *validator_ex = new QRegularExpressionValidator(rx_ex, this);
   m_exposure_ledit->setValidator(validator_ex);
   m_exposure_ledit->setToolTip("Exposure time in seconds, as float value.");
+  m_exposure_ledit->setText("0.5");
   
   /* options for Vertical Binning edit */
   QRegularExpression rx_vbn(

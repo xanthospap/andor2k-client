@@ -2,6 +2,7 @@
 #include "helmos-andor2k/cpp_socket.hpp"
 #include <QRegularExpressionValidator>
 #include <QMessageBox>
+#include <cstring>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -16,6 +17,7 @@ ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
   connect(m_connect_button, SIGNAL(clicked()), this, SLOT(sock_connect()));
   connect(m_defaults_button, SIGNAL(clicked()), this, SLOT(reset_defaults()));
   connect(m_disconnect_button, SIGNAL(clicked()), this, SLOT(disconnect()));
+  connect(m_shutdown_button, SIGNAL(clicked()), this, SLOT(shutdown_daemon()));
   
   printf("[DEBUG][ANDOR2K::client::%15s] ConnectionTab Socket at %p -> %p", __func__, &csock, csock);
   if (*csock)
@@ -48,6 +50,9 @@ void ConnectionTab::createGui() {
 
   m_defaults_button = new QPushButton("Reset Defaults");
   m_defaults_button->setEnabled(true);
+  
+  m_shutdown_button = new QPushButton("Shutdown Daemon");
+  m_shutdown_button->setEnabled(false);
 
   g_edits_layout = new QGridLayout;
   g_edits_layout->addWidget(new QLabel(tr("Host:")), 0, 0);
@@ -63,6 +68,7 @@ void ConnectionTab::createGui() {
   v_main_layout = new QVBoxLayout;
   v_main_layout->addLayout(g_edits_layout);
   v_main_layout->addLayout(h_button_layout);
+  v_main_layout->addWidget(m_shutdown_button);
 }
 
 void ConnectionTab::sock_connect() {
@@ -83,6 +89,7 @@ void ConnectionTab::sock_connect() {
   }
   m_connect_button->setEnabled(false);
   m_disconnect_button->setEnabled(true);
+  m_shutdown_button->setEnabled(true);
   
   printf("[DEBUG][ANDOR2K::client::%15s] Socket points to: ", __func__);
   if (*csock) {
@@ -100,7 +107,17 @@ void ConnectionTab::reset_defaults() {
 
 void ConnectionTab::disconnect() {
   (*csock)->close_socket();
+  delete (*csock);
   *csock = nullptr;
   m_connect_button->setEnabled(true);
   m_disconnect_button->setEnabled(false);
+  m_shutdown_button->setEnabled(false);
+}
+
+void ConnectionTab::shutdown_daemon() {
+  char buffer[1024];
+  std::memset(buffer, 0, 1024);
+  std::strcpy(buffer, "shutdown");
+  (*csock)->send(buffer);
+  disconnect();
 }

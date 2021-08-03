@@ -22,6 +22,7 @@ private:
   QPushButton *m_connect_button;
   QPushButton *m_disconnect_button;
   QPushButton *m_defaults_button;
+  QPushButton *m_shutdown_button;
   QLineEdit *m_hostname_ledit;
   QLineEdit *m_port_ledit;
   QGridLayout *g_edits_layout;
@@ -34,6 +35,7 @@ private slots:
   void sock_connect();
   void reset_defaults();
   void disconnect();
+  void shutdown_daemon();
 };
 
 #endif // CONNECTIONTAB_H
