@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QWidget>
 #include <QComboBox>
+#include <QCheckBox>
 #include "helmos-andor2k/cpp_socket.hpp"
 
 class ExposureTab : public QWidget {
@@ -30,6 +31,8 @@ private:
   QLineEdit *m_vend_pix;
   QLineEdit *m_hend_pix;
   QComboBox *m_type_cbox;
+  QCheckBox *m_tel_cb;
+  QLineEdit *m_tel_tries;
   QLabel *m_label;
   QVBoxLayout *m_layout;
   

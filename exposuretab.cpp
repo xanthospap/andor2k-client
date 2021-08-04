@@ -16,6 +16,9 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *pa
   csock = &csocket;
   buffer = sock_buffer;
   connect(m_start_button, SIGNAL(clicked()), this, SLOT(set_exposure()));
+  connect(m_type_cbox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+    [=](int index){ if (index==2) this->m_exposure_ledit->setEnabled(false); });
+  connect(m_tel_cb, SIGNAL(clicked(checked)), this, [=](){if (m_tel_cb->isChecked()) m_tel_tries->setEnabled(true); else m_tel_tries->setEnabled(false);});
   
   printf("[DEBUG][ANDOR2K::client::%15s] ExposureTab Socket at %p -> %p", __func__, &csock, csock);
   if (*csock)
@@ -76,10 +79,14 @@ int ExposureTab::make_command(char *buffer) {
   buffer[idx] = ' ';
   ++idx;
 
-  /* exposure */
+  /* exposure (if disabled, set to 0) */
   std::strcpy(buffer+idx, "--exposure ");
   idx = std::strlen(buffer);
-  tval = m_exposure_ledit->text().toStdString();
+  if (!m_exposure_ledit->isEnabled()) { /* aka bias */
+    tval = std::string("0.0");
+  } else {
+    tval = m_exposure_ledit->text().toStdString();
+  }
   std::strcpy(buffer+idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
@@ -242,6 +249,19 @@ void ExposureTab::createGui() {
   m_hend_pix->setToolTip("Horizontal end pixel (inclusive); integer in range [1, 2048]");
   m_hend_pix->setText("2048");
 
+  /* options for aristarchos header fetch tries */
+  QRegularExpression rx_telt("[0-9]{1,2}");
+  QValidator *validator_telt = new QRegularExpressionValidator(rx_telt, this);
+  m_tel_tries = new QLineEdit;
+  m_tel_tries->setValidator(validator_telt);
+  m_tel_tries->setToolTip("Number of tries to fetch Aristarchos headers begore giving up");
+  m_tel_tries->setText("3");
+  m_tel_tries->setEnabled(false);
+
+  /* checkbox for fetching (or not) aristarchos headers */
+  m_tel_cb = new QCheckBox("Fetch Aristarchos Headers", this);
+  m_tel_cb->setChecked(false);
+
   /* Options for Type edit */
   QStringList types = {"flat", "object", "bias"};
   m_type_cbox = new QComboBox(this);
@@ -292,6 +312,14 @@ void ExposureTab::createGui() {
   gen_layout->addWidget(new QLabel(tr("Num Images:")), 3, 0);
   gen_layout->addWidget(m_nimages_ledit, 3, 1);
   gen_gbox->setLayout(gen_layout);
+  
+  /* group aristarchos options */
+  QGroupBox *tel_gbox = new QGroupBox(tr("Aristarchos Options"));
+  QGridLayout *tel_layout = new QGridLayout;
+  tel_layout->addWidget(m_tel_cb, 0, 0);
+  tel_layout->addWidget(new QLabel(tr("Num. Tries")), 0, 1);
+  tel_layout->addWidget(m_tel_tries, 0, 2);
+  tel_gbox->setLayout(tel_layout);
 
   /* group buttons */
   QHBoxLayout *btn_hbox = new QHBoxLayout;
@@ -306,6 +334,7 @@ void ExposureTab::createGui() {
   m_layout->addWidget(gen_gbox);
   m_layout->addWidget(bin_gbox);
   m_layout->addWidget(pix_gbox);
+  m_layout->addWidget(tel_gbox);
   m_layout->addLayout(btn_hbox);
   // m_layout->setSizeConstraint(QLayout::SetFixedSize);
 
