@@ -1,27 +1,32 @@
 #include "temperaturetab.h"
 #include <QApplication>
-#include <QRegularExpressionValidator>
 #include <QMessageBox>
+#include <QRegularExpressionValidator>
 #include <cstring>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
-TemperatureTab::TemperatureTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *parent)
+TemperatureTab::TemperatureTab(ClientSocket *&csocket, char *sock_buffer,
+                               QWidget *parent)
     : QWidget(parent) {
-  printf("[DEBUG][ANDOR2K::client::%15s] Constructing TemperatureTab\n", __func__);
+  printf("[DEBUG][ANDOR2K::client::%15s] Constructing TemperatureTab\n",
+         __func__);
   createGui();
   setLayout(m_layout);
   csock = &csocket;
   buffer = sock_buffer;
   connect(m_set_button, SIGNAL(clicked()), this, SLOT(set_temperature()));
-  
-  printf("[DEBUG][ANDOR2K::client::%15s] TemperatureTab Socket at %p -> %p", __func__, &csock, csock);
+
+  printf("[DEBUG][ANDOR2K::client::%15s] TemperatureTab Socket at %p -> %p",
+         __func__, &csock, csock);
   if (*csock)
     printf(" -> %p\n", *csock);
   else
     printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing TemperatureTab\n", __func__);
+  printf(
+      "[DEBUG][ANDOR2K::client::%15s] Finished constructing TemperatureTab\n",
+      __func__);
 }
 
 void TemperatureTab::createGui() {
@@ -31,8 +36,9 @@ void TemperatureTab::createGui() {
       "[+-]?\\d{1,3}"); /* only allow integers in range [-999, 999] */
   QValidator *validator = new QRegularExpressionValidator(rx, this);
   m_set_temp_ledit->setValidator(validator);
-  m_set_temp_ledit->setToolTip("Set ANDOR2K temperature; range depends on camera");
-  
+  m_set_temp_ledit->setToolTip(
+      "Set ANDOR2K temperature; range depends on camera");
+
   m_show_temp_ledit = new QLineEdit;
 
   m_label = new QLabel;
@@ -60,14 +66,16 @@ void TemperatureTab::set_temperature() {
 
   /* check that the connection/socket is alive */
   if (*csock == nullptr) {
-    QMessageBox msbox(QMessageBox::Critical, "Connection Error", "Cannot send command to daemon! Need to connect first");
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Cannot send command to daemon! Need to connect first");
     msbox.exec();
     return;
   }
 
   /* check if user has passed in a temperature value */
   if (m_set_temp_ledit->text().isEmpty()) {
-    QMessageBox msbox(QMessageBox::Critical, "Empty Value", "Must provide a valid temperature value!");
+    QMessageBox msbox(QMessageBox::Critical, "Empty Value",
+                      "Must provide a valid temperature value!");
     msbox.exec();
     return;
   }
@@ -79,6 +87,7 @@ void TemperatureTab::set_temperature() {
   std::strcpy(buffer + std::strlen(buffer), tval.c_str());
 
   /* send command to deamon */
-  printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__, buffer);
+  printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
+         buffer);
   (*csock)->send(buffer);
 }

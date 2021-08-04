@@ -2,12 +2,13 @@
 #include "advancedsettings.h"
 #include "connectiontab.h"
 #include "exposuretab.h"
-#include "temperaturetab.h"
 #include "statustab.h"
+#include "temperaturetab.h"
 #include <QVBoxLayout>
 
-TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent) : QDialog(parent), csock(&sock_pt) {
-  
+TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent)
+    : QDialog(parent), csock(&sock_pt) {
+
   printf("[DEBUG][ANDOR2K::client::%15s] Constructing TabDialog\n", __func__);
   // csock = &sock_pt;
 
@@ -24,8 +25,12 @@ TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent) : QDialog
 
   setWindowTitle(tr("Andor2K Client"));
 
-  printf("[DEBUG][ANDOR2K::client::%15s] TabDialog Socket at %p" , __func__, &csock);
-  if (csock) printf(" -> %p\n", csock);
-  else printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing TabDialog\n", __func__);
+  printf("[DEBUG][ANDOR2K::client::%15s] TabDialog Socket at %p", __func__,
+         &csock);
+  if (csock)
+    printf(" -> %p\n", csock);
+  else
+    printf(" -> nowhere!\n");
+  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing TabDialog\n",
+         __func__);
 }

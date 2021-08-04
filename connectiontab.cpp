@@ -1,7 +1,7 @@
 #include "connectiontab.h"
 #include "helmos-andor2k/cpp_socket.hpp"
-#include <QRegularExpressionValidator>
 #include <QMessageBox>
+#include <QRegularExpressionValidator>
 #include <cstring>
 
 using andor2k::ClientSocket;
@@ -9,8 +9,9 @@ using andor2k::Socket;
 
 ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
-  printf("[DEBUG][ANDOR2K::client::%15s] Constructing ConnectionTab\n", __func__);
-  
+  printf("[DEBUG][ANDOR2K::client::%15s] Constructing ConnectionTab\n",
+         __func__);
+
   createGui();
   setLayout(v_main_layout);
   csock = &csocket;
@@ -18,13 +19,15 @@ ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
   connect(m_defaults_button, SIGNAL(clicked()), this, SLOT(reset_defaults()));
   connect(m_disconnect_button, SIGNAL(clicked()), this, SLOT(disconnect()));
   connect(m_shutdown_button, SIGNAL(clicked()), this, SLOT(shutdown_daemon()));
-  
-  printf("[DEBUG][ANDOR2K::client::%15s] ConnectionTab Socket at %p -> %p", __func__, &csock, csock);
+
+  printf("[DEBUG][ANDOR2K::client::%15s] ConnectionTab Socket at %p -> %p",
+         __func__, &csock, csock);
   if (*csock)
     printf(" -> %p\n", *csock);
   else
     printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ConnectionTab\n", __func__);
+  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ConnectionTab\n",
+         __func__);
 }
 
 void ConnectionTab::createGui() {
@@ -50,7 +53,7 @@ void ConnectionTab::createGui() {
 
   m_defaults_button = new QPushButton("Reset Defaults");
   m_defaults_button->setEnabled(true);
-  
+
   m_shutdown_button = new QPushButton("Shutdown Daemon");
   m_shutdown_button->setEnabled(false);
 
@@ -73,7 +76,8 @@ void ConnectionTab::createGui() {
 
 void ConnectionTab::sock_connect() {
   if (*csock) {
-    QMessageBox msbox(QMessageBox::Critical, "Connection Error", "Already Connected!");
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Already Connected!");
     msbox.exec();
     return;
   }
@@ -83,14 +87,15 @@ void ConnectionTab::sock_connect() {
     *csock = new ClientSocket(host.c_str(), m_port_ledit->text().toInt());
   } catch (std::exception &e) {
     *csock = nullptr;
-    QMessageBox messageBox(QMessageBox::Critical, "Connection Error", "Could not connect to daemon!");
+    QMessageBox messageBox(QMessageBox::Critical, "Connection Error",
+                           "Could not connect to daemon!");
     messageBox.exec();
     return;
   }
   m_connect_button->setEnabled(false);
   m_disconnect_button->setEnabled(true);
   m_shutdown_button->setEnabled(true);
-  
+
   printf("[DEBUG][ANDOR2K::client::%15s] Socket points to: ", __func__);
   if (*csock) {
     printf("%p -> %p\n", csock, *csock);

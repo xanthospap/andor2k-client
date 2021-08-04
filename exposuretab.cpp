@@ -1,44 +1,62 @@
 #include "exposuretab.h"
-#include <cstring>
 #include <QApplication>
-#include <QStringList>
 #include <QGroupBox>
 #include <QMessageBox>
+#include <QStringList>
+#include <cstring>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
-ExposureTab::ExposureTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *parent)
+ExposureTab::ExposureTab(ClientSocket *&csocket, char *sock_buffer,
+                         QWidget *parent)
     : QWidget(parent) {
   printf("[DEBUG][ANDOR2K::client::%15s] Constructing ExposureTab\n", __func__);
   createGui();
   setLayout(m_layout);
   csock = &csocket;
   buffer = sock_buffer;
+
   connect(m_start_button, SIGNAL(clicked()), this, SLOT(set_exposure()));
+
   connect(m_type_cbox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-    [=](int index){ if (index==2) this->m_exposure_ledit->setEnabled(false); });
-  connect(m_tel_cb, SIGNAL(clicked(checked)), this, [=](){if (m_tel_cb->isChecked()) m_tel_tries->setEnabled(true); else m_tel_tries->setEnabled(false);});
-  
-  printf("[DEBUG][ANDOR2K::client::%15s] ExposureTab Socket at %p -> %p", __func__, &csock, csock);
+          [=](int index) {
+            if (index == 2)
+              this->m_exposure_ledit->setEnabled(false);
+            else
+              this->m_exposure_ledit->setEnabled(true);
+          });
+
+  connect(m_tel_cb, &QCheckBox::clicked, [=](bool checked) {
+    if (checked)
+      m_tel_tries->setEnabled(true);
+    else
+      m_tel_tries->setEnabled(false);
+  });
+
+  printf("[DEBUG][ANDOR2K::client::%15s] ExposureTab Socket at %p -> %p",
+         __func__, &csock, csock);
   if (*csock)
     printf(" -> %p\n", *csock);
   else
     printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ExposureTab\n", __func__);
+  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ExposureTab\n",
+         __func__);
 }
 
 void ExposureTab::set_exposure() {
-  if ( this->make_command(this->buffer) ) return;
+  if (this->make_command(this->buffer))
+    return;
   /* send command to deamon */
-  printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__, buffer);
+  printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
+         buffer);
   (*csock)->send(buffer);
 }
 
 int ExposureTab::make_command(char *buffer) {
   std::size_t idx = 0;
   std::memset(buffer, '\0', 1024);
-  std::strcpy(buffer+idx, "image ");
+  std::strcpy(buffer + idx, "image ");
   idx = std::strlen(buffer);
 
   /* check for empty edits */
@@ -65,105 +83,121 @@ int ExposureTab::make_command(char *buffer) {
     std::strcpy(error_msg, "Horizontal start/end pixels cannot be empty!");
   }
   if (error) {
-    QMessageBox msbox(QMessageBox::Critical, "Exposure Options Error", error_msg);
+    QMessageBox msbox(QMessageBox::Critical, "Exposure Options Error",
+                      error_msg);
     msbox.exec();
     return error;
   }
 
   /* filename */
-  std::strcpy(buffer+idx, "--filename ");
+  std::strcpy(buffer + idx, "--filename ");
   idx = std::strlen(buffer);
   auto tval = m_filename_ledit->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
 
   /* exposure (if disabled, set to 0) */
-  std::strcpy(buffer+idx, "--exposure ");
+  std::strcpy(buffer + idx, "--exposure ");
   idx = std::strlen(buffer);
   if (!m_exposure_ledit->isEnabled()) { /* aka bias */
     tval = std::string("0.0");
   } else {
     tval = m_exposure_ledit->text().toStdString();
   }
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
 
   /* nimages */
-  std::strcpy(buffer+idx, "--nimages ");
+  std::strcpy(buffer + idx, "--nimages ");
   idx = std::strlen(buffer);
   tval = m_nimages_ledit->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* vbin */
-  std::strcpy(buffer+idx, "--vbin ");
+  std::strcpy(buffer + idx, "--vbin ");
   idx = std::strlen(buffer);
   tval = m_vbin_ledit->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* hbin */
-  std::strcpy(buffer+idx, "--hbin ");
+  std::strcpy(buffer + idx, "--hbin ");
   idx = std::strlen(buffer);
   tval = m_hbin_ledit->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* vstart */
-  std::strcpy(buffer+idx, "--vstart ");
+  std::strcpy(buffer + idx, "--vstart ");
   idx = std::strlen(buffer);
   tval = m_vstart_pix->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* vend */
-  std::strcpy(buffer+idx, "--vend ");
+  std::strcpy(buffer + idx, "--vend ");
   idx = std::strlen(buffer);
   tval = m_vend_pix->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* hstart */
-  std::strcpy(buffer+idx, "--hstart ");
+  std::strcpy(buffer + idx, "--hstart ");
   idx = std::strlen(buffer);
   tval = m_hstart_pix->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* hend */
-  std::strcpy(buffer+idx, "--hend ");
+  std::strcpy(buffer + idx, "--hend ");
   idx = std::strlen(buffer);
   tval = m_hend_pix->text().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* type */
-  std::strcpy(buffer+idx, "--type ");
+  std::strcpy(buffer + idx, "--type ");
   idx = std::strlen(buffer);
   tval = m_type_cbox->currentText().toStdString();
-  std::strcpy(buffer+idx, tval.c_str());
+  std::strcpy(buffer + idx, tval.c_str());
+  idx = std::strlen(buffer);
+  buffer[idx] = ' ';
+  ++idx;
+
+  /* aristarchos headers */
+  std::strcpy(buffer + idx, "--ar-tries ");
+  idx = std::strlen(buffer);
+  if (m_tel_tries->isEnabled()) {
+    tval = m_tel_tries->text().toStdString();
+  } else {
+    tval = std::string("0");
+  }
+  std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
 
-  //printf("[DEBUG][ANDOR2K::client::%15s] Sending command to daemon: [%s]\n", __func__, buffer);
-  printf("[DEBUG][ANDOR2K::client::%15s] Command size: %d\n", __func__, (int)std::strlen(buffer));
+  // printf("[DEBUG][ANDOR2K::client::%15s] Sending command to daemon: [%s]\n",
+  // __func__, buffer);
+  printf("[DEBUG][ANDOR2K::client::%15s] Command size: %d\n", __func__,
+         (int)std::strlen(buffer));
   return 0;
 }
 
@@ -182,17 +216,22 @@ void ExposureTab::createGui() {
   QRegularExpression rx_ni("[0-9]{1,3}");
   QValidator *validator_ni = new QRegularExpressionValidator(rx_ni, this);
   m_nimages_ledit->setValidator(validator_ni);
-  m_nimages_ledit->setToolTip("Number of images/exposures to be performed in run.");
+  m_nimages_ledit->setToolTip(
+      "Number of images/exposures to be performed in run.");
   m_nimages_ledit->setText("1");
-  
+
   /* options for Filename edit */
   QRegularExpression rx_fn(
       "[a-zA-Z0-9.]{1,127}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_fn = new QRegularExpressionValidator(rx_fn, this);
   m_filename_ledit->setValidator(validator_fn);
-  m_filename_ledit->setToolTip("Type in the filename of the exposure(s).\nDo not include path or the \".fits\" extension\nNote that the filename typed in here, will be augmented by the\ndate string (aka \"YYYYMMDD\" and a serial number starting from 1");
+  m_filename_ledit->setToolTip(
+      "Type in the filename of the exposure(s).\nDo not include path or the "
+      "\".fits\" extension\nNote that the filename typed in here, will be "
+      "augmented by the\ndate string (aka \"YYYYMMDD\" and a serial number "
+      "starting from 1");
   m_filename_ledit->setText("img");
-  
+
   /* options for Exposure edit */
   QRegularExpression rx_ex(
       "[0-9.]{1,10}"); /* only allow integers in range [-999, 999] */
@@ -200,7 +239,7 @@ void ExposureTab::createGui() {
   m_exposure_ledit->setValidator(validator_ex);
   m_exposure_ledit->setToolTip("Exposure time in seconds, as float value.");
   m_exposure_ledit->setText("0.5");
-  
+
   /* options for Vertical Binning edit */
   QRegularExpression rx_vbn(
       "[0-9]{1,3}"); /* only allow integers in range [-999, 999] */
@@ -208,7 +247,7 @@ void ExposureTab::createGui() {
   m_vbin_ledit->setValidator(validator_vbn);
   m_vbin_ledit->setToolTip("Vertical binning, as integer value.");
   m_vbin_ledit->setText("1");
-  
+
   /* options for Horizontal Binning edit */
   QRegularExpression rx_hbn(
       "[0-9]{1,3}"); /* only allow integers in range [-999, 999] */
@@ -216,37 +255,43 @@ void ExposureTab::createGui() {
   m_hbin_ledit->setValidator(validator_hbn);
   m_hbin_ledit->setToolTip("Horizontal binning, as integer value.");
   m_hbin_ledit->setText("1");
-  
+
   /* options for Vertical Start Pixel edit */
   QRegularExpression rx_vstart(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
-  QValidator *validator_vstart = new QRegularExpressionValidator(rx_vstart, this);
+  QValidator *validator_vstart =
+      new QRegularExpressionValidator(rx_vstart, this);
   m_vstart_pix->setValidator(validator_vstart);
-  m_vstart_pix->setToolTip("Vertical start pixel (inclusive); integer in range [1, 2048]");
+  m_vstart_pix->setToolTip(
+      "Vertical start pixel (inclusive); integer in range [1, 2048]");
   m_vstart_pix->setText("1");
-  
+
   /* options for Vertical End Pixel edit */
   QRegularExpression rx_vend(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_vend = new QRegularExpressionValidator(rx_vend, this);
   m_vend_pix->setValidator(validator_vend);
-  m_vend_pix->setToolTip("Vertical end pixel (inclusive); integer in range [1, 2048]");
+  m_vend_pix->setToolTip(
+      "Vertical end pixel (inclusive); integer in range [1, 2048]");
   m_vend_pix->setText("2048");
-  
+
   /* options for Horizontal Start Pixel edit */
   QRegularExpression rx_hstart(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
-  QValidator *validator_hstart = new QRegularExpressionValidator(rx_hstart, this);
+  QValidator *validator_hstart =
+      new QRegularExpressionValidator(rx_hstart, this);
   m_hstart_pix->setValidator(validator_hstart);
-  m_hstart_pix->setToolTip("Horizontal start pixel (inclusive); integer in range [1, 2048]");
+  m_hstart_pix->setToolTip(
+      "Horizontal start pixel (inclusive); integer in range [1, 2048]");
   m_hstart_pix->setText("1");
-  
+
   /* options for Horizontal End Pixel edit */
   QRegularExpression rx_hend(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_hend = new QRegularExpressionValidator(rx_hend, this);
   m_hend_pix->setValidator(validator_hend);
-  m_hend_pix->setToolTip("Horizontal end pixel (inclusive); integer in range [1, 2048]");
+  m_hend_pix->setToolTip(
+      "Horizontal end pixel (inclusive); integer in range [1, 2048]");
   m_hend_pix->setText("2048");
 
   /* options for aristarchos header fetch tries */
@@ -254,19 +299,21 @@ void ExposureTab::createGui() {
   QValidator *validator_telt = new QRegularExpressionValidator(rx_telt, this);
   m_tel_tries = new QLineEdit;
   m_tel_tries->setValidator(validator_telt);
-  m_tel_tries->setToolTip("Number of tries to fetch Aristarchos headers begore giving up");
+  m_tel_tries->setToolTip(
+      "Number of tries to fetch Aristarchos headers begore giving up");
   m_tel_tries->setText("3");
   m_tel_tries->setEnabled(false);
 
   /* checkbox for fetching (or not) aristarchos headers */
   m_tel_cb = new QCheckBox("Fetch Aristarchos Headers", this);
   m_tel_cb->setChecked(false);
+  m_tel_cb->setLayoutDirection(Qt::RightToLeft);
 
   /* Options for Type edit */
   QStringList types = {"flat", "object", "bias"};
   m_type_cbox = new QComboBox(this);
   m_type_cbox->addItems(types);
-  
+
   m_label = new QLabel;
   m_label->setFrameStyle(QFrame::Box | QFrame::Plain);
 
@@ -284,7 +331,7 @@ void ExposureTab::createGui() {
   bin_layout->addWidget(new QLabel(tr("Horizontal")), 1, 0);
   bin_layout->addWidget(m_hbin_ledit, 1, 1);
   bin_gbox->setLayout(bin_layout);
-  
+
   /* group image dimensions options */
   QGroupBox *pix_gbox = new QGroupBox(tr("Image Dimensions"));
   QGridLayout *pix_layout = new QGridLayout;
@@ -299,7 +346,7 @@ void ExposureTab::createGui() {
   pix_layout->addWidget(new QLabel(tr("End")), 1, 4);
   pix_layout->addWidget(m_hend_pix, 1, 5);
   pix_gbox->setLayout(pix_layout);
-  
+
   /* group general options */
   QGroupBox *gen_gbox = new QGroupBox(tr("General Options"));
   QGridLayout *gen_layout = new QGridLayout;
@@ -312,7 +359,7 @@ void ExposureTab::createGui() {
   gen_layout->addWidget(new QLabel(tr("Num Images:")), 3, 0);
   gen_layout->addWidget(m_nimages_ledit, 3, 1);
   gen_gbox->setLayout(gen_layout);
-  
+
   /* group aristarchos options */
   QGroupBox *tel_gbox = new QGroupBox(tr("Aristarchos Options"));
   QGridLayout *tel_layout = new QGridLayout;

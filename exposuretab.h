@@ -1,19 +1,20 @@
 #ifndef EXPOSURETAB_H
 #define EXPOSURETAB_H
 
+#include "helmos-andor2k/cpp_socket.hpp"
+#include <QCheckBox>
+#include <QComboBox>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QWidget>
-#include <QComboBox>
-#include <QCheckBox>
-#include "helmos-andor2k/cpp_socket.hpp"
 
 class ExposureTab : public QWidget {
   Q_OBJECT
 public:
-  explicit ExposureTab(andor2k::ClientSocket *&sock, char *sbuf, QWidget *parent = nullptr);
+  explicit ExposureTab(andor2k::ClientSocket *&sock, char *sbuf,
+                       QWidget *parent = nullptr);
 
 private:
   void createGui();
@@ -35,7 +36,7 @@ private:
   QLineEdit *m_tel_tries;
   QLabel *m_label;
   QVBoxLayout *m_layout;
-  
+
   andor2k::ClientSocket **csock;
   char *buffer = nullptr;
 

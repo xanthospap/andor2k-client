@@ -1,13 +1,13 @@
 #include "statustab.h"
 #include <QApplication>
-#include <QRegularExpressionValidator>
 #include <QMessageBox>
+#include <QRegularExpressionValidator>
 #include <cstring>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
-StatusTab::StatusTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *parent)
+StatusTab::StatusTab(ClientSocket *&csocket, char *sock_buffer, QWidget *parent)
     : QWidget(parent) {
   printf("[DEBUG][ANDOR2K::client::%15s] Constructing StatusTab\n", __func__);
   createGui();
@@ -15,13 +15,15 @@ StatusTab::StatusTab(ClientSocket *&csocket, char* sock_buffer,  QWidget *parent
   csock = &csocket;
   buffer = sock_buffer;
   // connect(m_set_button, SIGNAL(clicked()), this, SLOT(get_status()));
-  
-  printf("[DEBUG][ANDOR2K::client::%15s] StatusTab Socket at %p -> %p", __func__, &csock, csock);
+
+  printf("[DEBUG][ANDOR2K::client::%15s] StatusTab Socket at %p -> %p",
+         __func__, &csock, csock);
   if (*csock)
     printf(" -> %p\n", *csock);
   else
     printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing StatusTab\n", __func__);
+  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing StatusTab\n",
+         __func__);
 }
 
 void StatusTab::createGui() {
