@@ -34,6 +34,8 @@ private:
   QComboBox *m_type_cbox;
   QCheckBox *m_tel_cb;
   QLineEdit *m_tel_tries;
+  QLineEdit *m_obj_name;
+  QLineEdit *m_filter_name;
   QLabel *m_label;
   QVBoxLayout *m_layout;
 

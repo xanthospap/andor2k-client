@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QStringList>
 #include <cstring>
+#include "exposurestatusdialog.h"
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -45,12 +46,46 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, char *sock_buffer,
 }
 
 void ExposureTab::set_exposure() {
+  /* check that the connection/socket is alive */
+  if (*csock == nullptr) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Cannot send command to daemon! Need to connect first");
+    msbox.exec();
+    return;
+  }
+  
   if (this->make_command(this->buffer))
     return;
+  
   /* send command to deamon */
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
   (*csock)->send(buffer);
+  
+  // return;
+  
+  // test hearing for answer ...
+  /*
+  bool keep_working = true;
+  while (keep_working) {
+    std::memset(buffer, 0, 1024);
+    if ( (*csock)->recv(buffer, 1024) < 0 ) {
+      printf("--- ERROR failed to receiver server message\n");
+    }
+    printf("<----- Server status: [%s]\n", buffer);
+    if (!(*buffer) || !std::strncmp(buffer, "done", 4)) {
+      keep_working = false;
+      printf("server signaled work done!\n");
+    }
+  }*/
+
+  /*
+  int num_images = m_nimages_ledit->text().toInt();
+  ExposureStatusDialog *popup = new ExposureStatusDialog(*csock, num_images);
+  // popup->setWindowModality(Qt::WindowModal);
+  popup->exec();
+  */
+  return;
 }
 
 int ExposureTab::make_command(char *buffer) {
@@ -69,6 +104,12 @@ int ExposureTab::make_command(char *buffer) {
   } else if (m_exposure_ledit->text().isEmpty()) {
     error = 1;
     std::strcpy(error_msg, "Exposure cannot be empty!");
+  } else if (m_obj_name->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Object name cannot be empty!");
+  } else if (m_filter_name->text().isEmpty()) {
+    error = 1;
+    std::strcpy(error_msg, "Filter name cannot be empty!");
   } else if (m_nimages_ledit->text().isEmpty()) {
     error = 1;
     std::strcpy(error_msg, "Number of Images cannot be empty!");
@@ -182,6 +223,24 @@ int ExposureTab::make_command(char *buffer) {
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
+  
+  /* object */
+  std::strcpy(buffer + idx, "--object ");
+  idx = std::strlen(buffer);
+  tval = m_obj_name->text().toStdString();
+  std::strcpy(buffer + idx, tval.c_str());
+  idx = std::strlen(buffer);
+  buffer[idx] = ' ';
+  ++idx;
+  
+  /* filter */
+  std::strcpy(buffer + idx, "--filter ");
+  idx = std::strlen(buffer);
+  tval = m_filter_name->text().toStdString();
+  std::strcpy(buffer + idx, tval.c_str());
+  idx = std::strlen(buffer);
+  buffer[idx] = ' ';
+  ++idx;
 
   /* aristarchos headers */
   std::strcpy(buffer + idx, "--ar-tries ");
@@ -211,6 +270,8 @@ void ExposureTab::createGui() {
   m_hstart_pix = new QLineEdit;
   m_vend_pix = new QLineEdit;
   m_hend_pix = new QLineEdit;
+  m_obj_name = new QLineEdit;
+  m_filter_name = new QLineEdit;
 
   /* options for NumImages edit */
   QRegularExpression rx_ni("[0-9]{1,3}");
@@ -294,6 +355,11 @@ void ExposureTab::createGui() {
       "Horizontal end pixel (inclusive); integer in range [1, 2048]");
   m_hend_pix->setText("2048");
 
+  m_obj_name->setToolTip("Name of object (will be written in FITS header)");
+  m_obj_name->setMaxLength(31);
+  m_filter_name->setToolTip("Name of filter applied for the exposure(s)");
+  m_filter_name->setMaxLength(15);
+
   /* options for aristarchos header fetch tries */
   QRegularExpression rx_telt("[0-9]{1,2}");
   QValidator *validator_telt = new QRegularExpressionValidator(rx_telt, this);
@@ -310,7 +376,7 @@ void ExposureTab::createGui() {
   m_tel_cb->setLayoutDirection(Qt::RightToLeft);
 
   /* Options for Type edit */
-  QStringList types = {"flat", "object", "bias"};
+  QStringList types = {"flat", "object", "bias", "dark"};
   m_type_cbox = new QComboBox(this);
   m_type_cbox->addItems(types);
 
@@ -352,12 +418,16 @@ void ExposureTab::createGui() {
   QGridLayout *gen_layout = new QGridLayout;
   gen_layout->addWidget(new QLabel(tr("Filename:")), 0, 0);
   gen_layout->addWidget(m_filename_ledit, 0, 1);
-  gen_layout->addWidget(new QLabel(tr("Type:")), 1, 0);
-  gen_layout->addWidget(m_type_cbox, 1, 1);
-  gen_layout->addWidget(new QLabel(tr("Exposure (sec):")), 2, 0);
-  gen_layout->addWidget(m_exposure_ledit, 2, 1);
-  gen_layout->addWidget(new QLabel(tr("Num Images:")), 3, 0);
-  gen_layout->addWidget(m_nimages_ledit, 3, 1);
+  gen_layout->addWidget(new QLabel(tr("Object Name:")), 1, 0);
+  gen_layout->addWidget(m_obj_name, 1, 1);
+  gen_layout->addWidget(new QLabel(tr("Type:")), 2, 0);
+  gen_layout->addWidget(m_type_cbox, 2, 1);
+  gen_layout->addWidget(new QLabel(tr("Exposure (sec):")), 3, 0);
+  gen_layout->addWidget(m_exposure_ledit, 3, 1);
+  gen_layout->addWidget(new QLabel(tr("Num Images:")), 4, 0);
+  gen_layout->addWidget(m_nimages_ledit, 4, 1);
+  gen_layout->addWidget(new QLabel(tr("Filter Name:")), 5, 0);
+  gen_layout->addWidget(m_filter_name, 5, 1);
   gen_gbox->setLayout(gen_layout);
 
   /* group aristarchos options */
