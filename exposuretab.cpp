@@ -1,10 +1,10 @@
 #include "exposuretab.h"
+#include "exposurestatusdialog.h"
 #include <QApplication>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QStringList>
 #include <cstring>
-#include "exposurestatusdialog.h"
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -53,20 +53,19 @@ void ExposureTab::set_exposure() {
     msbox.exec();
     return;
   }
-  
+
   if (this->make_command(this->buffer))
     return;
-  
+
   /* send command to deamon */
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
   (*csock)->send(buffer);
-  
+
   // return;
-  
+
   // test hearing for answer ...
-  /*
-  bool keep_working = true;
+  /*bool keep_working = true;
   while (keep_working) {
     std::memset(buffer, 0, 1024);
     if ( (*csock)->recv(buffer, 1024) < 0 ) {
@@ -79,12 +78,10 @@ void ExposureTab::set_exposure() {
     }
   }*/
 
-  /*
   int num_images = m_nimages_ledit->text().toInt();
   ExposureStatusDialog *popup = new ExposureStatusDialog(*csock, num_images);
   // popup->setWindowModality(Qt::WindowModal);
   popup->exec();
-  */
   return;
 }
 
@@ -223,7 +220,7 @@ int ExposureTab::make_command(char *buffer) {
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* object */
   std::strcpy(buffer + idx, "--object ");
   idx = std::strlen(buffer);
@@ -232,7 +229,7 @@ int ExposureTab::make_command(char *buffer) {
   idx = std::strlen(buffer);
   buffer[idx] = ' ';
   ++idx;
-  
+
   /* filter */
   std::strcpy(buffer + idx, "--filter ");
   idx = std::strlen(buffer);

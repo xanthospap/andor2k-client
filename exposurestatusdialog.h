@@ -3,15 +3,15 @@
 
 #include "helmos-andor2k/cpp_socket.hpp"
 #include <QDialog>
-#include <QWidget>
 #include <QLineEdit>
 #include <QVBoxLayout>
+#include <QWidget>
 
 class ExposureStatusDialog : public QDialog {
   Q_OBJECT
 public:
   explicit ExposureStatusDialog(andor2k::ClientSocket *sock_ptr, int num_images,
-                     QWidget *parent = nullptr);
+                                QWidget *parent = nullptr);
 
 private:
   int num_images;

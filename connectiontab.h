@@ -25,9 +25,21 @@ private:
   QPushButton *m_shutdown_button;
   QLineEdit *m_hostname_ledit;
   QLineEdit *m_port_ledit;
+  QLineEdit *m_init_temp;
+  QLineEdit *m_observer;
+
+  QLineEdit *m_temp_c;
+  QLineEdit *m_con_status;
+  QLineEdit *m_server_info;
+  QLineEdit *m_time;
+
   QGridLayout *g_edits_layout;
   QHBoxLayout *h_button_layout;
   QVBoxLayout *v_main_layout;
+
+  char buffer[1024];
+
+  void send_settemp();
 
 signals:
 
@@ -36,6 +48,8 @@ private slots:
   void reset_defaults();
   void disconnect();
   void shutdown_daemon();
+  void serverJobDone();
+  void serverJobUpdate(const QString&);
 };
 
 #endif // CONNECTIONTAB_H
