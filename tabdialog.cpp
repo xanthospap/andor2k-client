@@ -17,7 +17,7 @@ TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent)
   m_tabWidget->addTab(new ExposureTab(sock_pt), tr("Exposures"));
   m_tabWidget->addTab(new TemperatureTab(sock_pt, buffer), tr("Temperature"));
   m_tabWidget->addTab(new StatusTab(sock_pt, buffer), tr("Status"));
-  m_tabWidget->addTab(new AdvancedSettings(), tr("Advanced Settings"));
+  m_tabWidget->addTab(new AdvancedSettings(sock_pt), tr("Advanced Settings"));
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->addWidget(m_tabWidget);
