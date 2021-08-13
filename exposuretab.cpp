@@ -1,22 +1,25 @@
 #include "exposuretab.h"
+#include "cliutils.h"
 #include "exposurestatusdialog.h"
 #include <QApplication>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QStringList>
 #include <cstring>
+#include "imagethread.h"
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
-ExposureTab::ExposureTab(ClientSocket *&csocket, char *sock_buffer,
-                         QWidget *parent)
+ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
+#ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] Constructing ExposureTab\n", __func__);
+#endif
+
   createGui();
-  setLayout(m_layout);
+  setLayout(main_layout);
   csock = &csocket;
-  buffer = sock_buffer;
 
   connect(m_start_button, SIGNAL(clicked()), this, SLOT(set_exposure()));
 
@@ -35,6 +38,7 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, char *sock_buffer,
       m_tel_tries->setEnabled(false);
   });
 
+#ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] ExposureTab Socket at %p -> %p",
          __func__, &csock, csock);
   if (*csock)
@@ -43,6 +47,7 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, char *sock_buffer,
     printf(" -> nowhere!\n");
   printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ExposureTab\n",
          __func__);
+#endif
 }
 
 void ExposureTab::set_exposure() {
@@ -57,33 +62,44 @@ void ExposureTab::set_exposure() {
   if (this->make_command(this->buffer))
     return;
 
-  /* send command to deamon */
+    /* send command to deamon */
+#ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
+#endif
   (*csock)->send(buffer);
 
-  // return;
+  std::memset(buffer, 0, 1024);
+  ImageThread *ithread = new ImageThread(*csock);
+  connect(ithread, &ImageThread::resultReady, this,
+          &ExposureTab::serverJobDone);
+  connect(ithread, &ImageThread::newResponseReady, this,
+          &ExposureTab::serverJobUpdate);
+  connect(ithread, &ImageThread::finished, ithread, &QObject::deleteLater);
+  ithread->start();
 
-  // test hearing for answer ...
-  /*bool keep_working = true;
-  while (keep_working) {
-    std::memset(buffer, 0, 1024);
-    if ( (*csock)->recv(buffer, 1024) < 0 ) {
-      printf("--- ERROR failed to receiver server message\n");
-    }
-    printf("<----- Server status: [%s]\n", buffer);
-    if (!(*buffer) || !std::strncmp(buffer, "done", 4)) {
-      keep_working = false;
-      printf("server signaled work done!\n");
-    }
-  }*/
-
-  int num_images = m_nimages_ledit->text().toInt();
-  ExposureStatusDialog *popup = new ExposureStatusDialog(*csock, num_images);
-  // popup->setWindowModality(Qt::WindowModal);
-  popup->exec();
   return;
 }
+
+void ExposureTab::serverJobUpdate(const QString &response) {
+  QStringList list(split_command(response));
+  QString val;
+  bool converted;
+  m_server_info->setText(get_val("info", list));
+  m_server_status->setText(get_val("status", list));
+  m_server_time->setText(get_val("time", list));
+  m_image_nr->setText(get_val("image", list));
+#ifdef DEBUG
+  auto spercent = get_val("progperc", list);
+  printf("\tserver says percent done is: %s\n", spercent.toStdString().c_str());
+#endif
+  int percent = get_val("progperc", list).toInt(&converted);
+  if (converted)
+    m_prog_bar->setValue(percent);
+  return;
+}
+
+void ExposureTab::serverJobDone() { setEditable(true); }
 
 int ExposureTab::make_command(char *buffer) {
   std::size_t idx = 0;
@@ -257,6 +273,20 @@ int ExposureTab::make_command(char *buffer) {
   return 0;
 }
 
+void ExposureTab::setEditable(bool editable) {
+  m_filename_ledit->setEnabled(editable);
+  m_exposure_ledit->setEnabled(editable);
+  m_nimages_ledit->setEnabled(editable);
+  m_vbin_ledit->setEnabled(editable);
+  m_hbin_ledit->setEnabled(editable);
+  m_vstart_pix->setEnabled(editable);
+  m_hstart_pix->setEnabled(editable);
+  m_vend_pix->setEnabled(editable);
+  m_hend_pix->setEnabled(editable);
+  m_obj_name->setEnabled(editable);
+  m_filter_name->setEnabled(editable);
+}
+
 void ExposureTab::createGui() {
   m_filename_ledit = new QLineEdit;
   m_exposure_ledit = new QLineEdit;
@@ -377,14 +407,38 @@ void ExposureTab::createGui() {
   m_type_cbox = new QComboBox(this);
   m_type_cbox->addItems(types);
 
+  // Server Response Panel
+  m_server_info = new QLineEdit;
+  m_server_status = new QLineEdit;
+  m_server_time = new QLineEdit;
+  m_image_nr = new QLineEdit;
+
   m_label = new QLabel;
   m_label->setFrameStyle(QFrame::Box | QFrame::Plain);
 
-  /* Buttons */
+  // Buttons
   m_cancel_button = new QPushButton("Cancel", this);
   m_start_button = new QPushButton("Start", this);
   m_start_button->setEnabled(true);
   m_cancel_button->setEnabled(false);
+
+  // the progress bar
+  m_prog_bar = new QProgressBar;
+  m_prog_bar->setRange(0, 100);
+
+  // group server response
+  QGroupBox *server_gbox = new QGroupBox(tr("Server Status"));
+  QGridLayout *server_layout = new QGridLayout;
+  server_layout->addWidget(new QLabel(tr("ANDOR2K Info")), 0, 0);
+  server_layout->addWidget(m_server_info, 0, 1, 1, 2);
+  server_layout->addWidget(new QLabel(tr("ANDOR2K Status")), 1, 0);
+  server_layout->addWidget(m_server_status, 1, 1, 1, 2);
+  server_layout->addWidget(new QLabel(tr("Last Response Time")), 2, 0);
+  server_layout->addWidget(m_server_time, 2, 1, 1, 2);
+  server_layout->addWidget(new QLabel(tr("Image nr")), 3, 0, 1, 2);
+  server_layout->addWidget(m_image_nr, 3, 1);
+  server_layout->addWidget(m_prog_bar, 4, 0, 1, 3);
+  server_gbox->setLayout(server_layout);
 
   /* group binning options */
   QGroupBox *bin_gbox = new QGroupBox(tr("Binning Options"));
@@ -440,19 +494,18 @@ void ExposureTab::createGui() {
   btn_hbox->addWidget(m_start_button);
   btn_hbox->addWidget(m_cancel_button);
 
-  QFrame *line = new QFrame();
-  line->setFrameShape(QFrame::HLine);
-  line->setFrameShadow(QFrame::Sunken);
+  // QFrame *line = new QFrame();
+  // line->setFrameShape(QFrame::HLine);
+  // line->setFrameShadow(QFrame::Sunken);
 
-  m_layout = new QVBoxLayout;
-  m_layout->addWidget(gen_gbox);
-  m_layout->addWidget(bin_gbox);
-  m_layout->addWidget(pix_gbox);
-  m_layout->addWidget(tel_gbox);
-  m_layout->addLayout(btn_hbox);
-  // m_layout->setSizeConstraint(QLayout::SetFixedSize);
+  QVBoxLayout *v_layout = new QVBoxLayout;
+  v_layout->addWidget(gen_gbox);
+  v_layout->addWidget(bin_gbox);
+  v_layout->addWidget(pix_gbox);
+  v_layout->addWidget(tel_gbox);
+  v_layout->addLayout(btn_hbox);
 
-  // cancel signals, closes app
-  /*connect(m_exit_button, SIGNAL(clicked()), QApplication::instance(),
-          SLOT(quit()));*/
+  main_layout = new QHBoxLayout;
+  main_layout->addLayout(v_layout);
+  main_layout->addWidget(server_gbox);
 }

@@ -15,14 +15,15 @@ public:
                          QWidget *parent = nullptr);
 
 private:
-  void createGui();
-
   andor2k::ClientSocket **csock;
+  char buffer[1024];
 
   QPushButton *m_connect_button;
   QPushButton *m_disconnect_button;
   QPushButton *m_defaults_button;
   QPushButton *m_shutdown_button;
+  QPushButton *m_edit_button;
+
   QLineEdit *m_hostname_ledit;
   QLineEdit *m_port_ledit;
   QLineEdit *m_init_temp;
@@ -37,19 +38,21 @@ private:
   QHBoxLayout *h_button_layout;
   QVBoxLayout *v_main_layout;
 
-  char buffer[1024];
-
+  void createGui();
   void send_settemp();
+  void setEditable();
+  void setUnEditable();
 
 signals:
 
 private slots:
   void sock_connect();
   void reset_defaults();
+  void make_editable();
   void disconnect();
   void shutdown_daemon();
   void serverJobDone();
-  void serverJobUpdate(const QString&);
+  void serverJobUpdate(const QString &);
 };
 
 #endif // CONNECTIONTAB_H

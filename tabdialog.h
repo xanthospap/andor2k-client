@@ -16,7 +16,7 @@ public:
 private:
   QTabWidget *m_tabWidget;
   QDialogButtonBox *m_buttonBox;
-  char buffer[1024];
+  char buffer[1024]; // todo delete this!
   andor2k::ClientSocket **csock;
 };
 

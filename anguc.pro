@@ -19,7 +19,9 @@ SOURCES += \
 
 HEADERS += \
     advancedsettings.h \
+    cliutils.h \
     settempthread.h \
+    imagethread.h \
     connectiontab.h \
     exposuretab.h \
     temperaturetab.h \
