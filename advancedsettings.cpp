@@ -1,5 +1,5 @@
 #include "advancedsettings.h"
-#include "andor2k.hpp"
+#include "helmos-andor2k/andor2k.hpp"
 #include <QStringList>
 #include <QGroupBox>
 #include <QGridLayout>
@@ -10,6 +10,7 @@
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
+/*
 int AdvancedSettings::make_acquisition_command() {
 
   auto smode = m_acquisition_mode->currentText();
@@ -28,6 +29,7 @@ int AdvancedSettings::make_acquisition_command() {
   std::sprintf(buffer, "setparam acqmode=%d", imode);
   return 0; 
 }
+*/
 
 AdvancedSettings::AdvancedSettings(ClientSocket *&csocket, QWidget *parent) 
   : QWidget(parent) 

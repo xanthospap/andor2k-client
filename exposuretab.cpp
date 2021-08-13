@@ -82,6 +82,7 @@ void ExposureTab::set_exposure() {
 }
 
 void ExposureTab::serverJobUpdate(const QString &response) {
+  printf("--> get string from server: [%s] <---\n", response.toStdString().c_str());
   QStringList list(split_command(response));
   QString val;
   bool converted;
@@ -89,17 +90,16 @@ void ExposureTab::serverJobUpdate(const QString &response) {
   m_server_status->setText(get_val("status", list));
   m_server_time->setText(get_val("time", list));
   m_image_nr->setText(get_val("image", list));
-#ifdef DEBUG
-  auto spercent = get_val("progperc", list);
-  printf("\tserver says percent done is: %s\n", spercent.toStdString().c_str());
-#endif
   int percent = get_val("progperc", list).toInt(&converted);
   if (converted)
     m_prog_bar->setValue(percent);
   return;
 }
 
-void ExposureTab::serverJobDone() { setEditable(true); }
+void ExposureTab::serverJobDone(const QString &response) {
+  serverJobUpdate(response);
+  setEditable(true); 
+}
 
 int ExposureTab::make_command(char *buffer) {
   std::size_t idx = 0;

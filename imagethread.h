@@ -46,11 +46,11 @@ private:
     }
 
     QApplication::restoreOverrideCursor();
-    emit resultReady();
+    emit resultReady(QString(buffer));
   }
 
 signals:
-  void resultReady();
+  void resultReady(const QString& );
   void newResponseReady(const QString &);
 }; // imageThread
 

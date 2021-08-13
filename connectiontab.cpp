@@ -232,7 +232,7 @@ void ConnectionTab::sock_connect() {
   m_shutdown_button->setEnabled(true);
   m_con_status->setText("connected");
 
-  send_settemp();
+  // send_settemp(); RUN
 
 #ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] Socket points to: ", __func__);

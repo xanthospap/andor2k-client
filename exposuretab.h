@@ -56,7 +56,7 @@ signals:
 
 private slots:
   void set_exposure();
-  void serverJobDone();
+  void serverJobDone(const QString&);
   void serverJobUpdate(const QString &);
 };
 

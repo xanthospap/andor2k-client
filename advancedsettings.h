@@ -20,7 +20,7 @@ private:
 
   QComboBox *m_acquisition_mode;
   QVBoxLayout *main_layout;
-  QPushButton *m_set_btn
+  QPushButton *m_set_btn;
 
 signals:
 };
