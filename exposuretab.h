@@ -46,7 +46,10 @@ private:
   QLineEdit *m_server_status;
   QLineEdit *m_server_time;
   QLineEdit *m_image_nr;
+  QLineEdit *m_elt;
+  QLineEdit *m_series_elt;
   QProgressBar *m_prog_bar;
+  QProgressBar *m_series_prog_bar;
 
   QHBoxLayout *main_layout;
 
@@ -56,7 +59,7 @@ signals:
 
 private slots:
   void set_exposure();
-  void serverJobDone(const QString&);
+  void serverJobDone(const QString &);
   void serverJobUpdate(const QString &);
 };
 

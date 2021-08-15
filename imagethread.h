@@ -23,34 +23,38 @@ private:
     QString val;
     char buffer[1024];
 
+    // set cursor to waiting mode
     QApplication::setOverrideCursor(Qt::WaitCursor);
+
     // keep updating menu while server responds
     bool server_done = false;
+    printf("--> Starting listening thread on client <--\n");
     while (!server_done) {
       std::memset(buffer, 0, 1024);
       if (socket->recv(buffer, 1024) < 0) {
         printf("--- ERROR failed to receiver server message ---\n");
       }
-#ifdef DEBUG
-      printf("<----- Server status: [%s]\n", buffer);
-#endif
 
-      if (!std::strncmp(buffer, "done", 4) || std::strstr(buffer, "done") != nullptr) {
+      if (!std::strncmp(buffer, "done", 4) ||
+          std::strstr(buffer, "done") != nullptr) {
         server_done = true;
-#ifdef DEBUG
-        printf("server signaled work done!\n");
-#endif
-      } else {
-        emit newResponseReady(QString(buffer));
       }
+
+      // emit newResponseReady signal
+      emit newResponseReady(QString(buffer));
     }
 
+    // unset waiting mode on cursor
     QApplication::restoreOverrideCursor();
+
+    // emit resultReady signal
     emit resultReady(QString(buffer));
+
+    printf("--> Closing listening thread on client <--\n");
   }
 
 signals:
-  void resultReady(const QString& );
+  void resultReady(const QString &);
   void newResponseReady(const QString &);
 }; // imageThread
 

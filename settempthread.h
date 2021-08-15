@@ -35,7 +35,8 @@ private:
       printf("<----- Server status: [%s]\n", buffer);
 #endif
 
-      if (!std::strncmp(buffer, "done", 4) || std::strstr(buffer, "done")!=nullptr) {
+      if (!std::strncmp(buffer, "done", 4) ||
+          std::strstr(buffer, "done") != nullptr) {
         server_done = true;
 #ifdef DEBUG
         printf("server signaled work done!\n");

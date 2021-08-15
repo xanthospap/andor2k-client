@@ -1,22 +1,18 @@
 #include "exposuretab.h"
 #include "cliutils.h"
 #include "exposurestatusdialog.h"
+#include "imagethread.h"
 #include <QApplication>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QStringList>
 #include <cstring>
-#include "imagethread.h"
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
 ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
-#ifdef DEBUG
-  printf("[DEBUG][ANDOR2K::client::%15s] Constructing ExposureTab\n", __func__);
-#endif
-
   createGui();
   setLayout(main_layout);
   csock = &csocket;
@@ -37,21 +33,10 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
     else
       m_tel_tries->setEnabled(false);
   });
-
-#ifdef DEBUG
-  printf("[DEBUG][ANDOR2K::client::%15s] ExposureTab Socket at %p -> %p",
-         __func__, &csock, csock);
-  if (*csock)
-    printf(" -> %p\n", *csock);
-  else
-    printf(" -> nowhere!\n");
-  printf("[DEBUG][ANDOR2K::client::%15s] Finished constructing ExposureTab\n",
-         __func__);
-#endif
 }
 
 void ExposureTab::set_exposure() {
-  /* check that the connection/socket is alive */
+  // check that the connection/socket is alive
   if (*csock == nullptr) {
     QMessageBox msbox(QMessageBox::Critical, "Connection Error",
                       "Cannot send command to daemon! Need to connect first");
@@ -62,43 +47,115 @@ void ExposureTab::set_exposure() {
   if (this->make_command(this->buffer))
     return;
 
-    /* send command to deamon */
+    // send command to deamon
 #ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
 #endif
   (*csock)->send(buffer);
 
-  std::memset(buffer, 0, 1024);
+  // start listening thread for server info
   ImageThread *ithread = new ImageThread(*csock);
+
   connect(ithread, &ImageThread::resultReady, this,
           &ExposureTab::serverJobDone);
   connect(ithread, &ImageThread::newResponseReady, this,
           &ExposureTab::serverJobUpdate);
   connect(ithread, &ImageThread::finished, ithread, &QObject::deleteLater);
+
   ithread->start();
 
   return;
 }
 
 void ExposureTab::serverJobUpdate(const QString &response) {
-  printf("--> get string from server: [%s] <---\n", response.toStdString().c_str());
+  printf("--> get string from server: [%s] <---\n",
+         response.toStdString().c_str());
   QStringList list(split_command(response));
-  QString val;
+  QString val(64, ' '), empty(" ");
   bool converted;
-  m_server_info->setText(get_val("info", list));
-  m_server_status->setText(get_val("status", list));
-  m_server_time->setText(get_val("time", list));
-  m_image_nr->setText(get_val("image", list));
+
+  val = get_val("info", list);
+  if (val != empty) {
+    m_server_info->setText(val);
+    m_server_info->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_server_info->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  val = get_val("status", list);
+  if (val != empty) {
+    m_server_status->setText(val);
+    m_server_status->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_server_status->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  val = get_val("time", list);
+  if (val != empty) {
+    m_server_time->setText(val);
+    m_server_time->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_server_time->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  val = get_val("image", list);
+  if (val != empty) {
+    m_image_nr->setText(val);
+    m_image_nr->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_image_nr->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  val = get_val("elapsedt", list);
+  if (val != empty) {
+    m_elt->setText(val);
+    m_elt->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_elt->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  val = get_val("selapsedt", list);
+  if (val != empty) {
+    m_series_elt->setText(val);
+    m_series_elt->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_series_elt->setStyleSheet("QLabel { color: grey; }");
+  }
+
   int percent = get_val("progperc", list).toInt(&converted);
   if (converted)
-    m_prog_bar->setValue(percent);
+    m_prog_bar->setValue(percent > 100 ? 100 : percent);
+
+  percent = get_val("sprogperc", list).toInt(&converted);
+  if (converted)
+    m_series_prog_bar->setValue(percent > 100 ? 100 : percent);
+
   return;
 }
 
 void ExposureTab::serverJobDone(const QString &response) {
   serverJobUpdate(response);
-  setEditable(true); 
+
+  // get the exit status
+  QStringList list(split_command(response));
+  bool converted;
+  int error = get_val("error", list).toInt(&converted);
+  if (converted && !error) {
+    QMessageBox msbox(QMessageBox::Information, "Exposure Status",
+                      "All done! Exposure ended");
+    m_prog_bar->setValue(100);
+    m_series_prog_bar->setValue(100);
+    msbox.exec();
+  } else {
+    QString info("Exposure ended (status:");
+    info += get_val("error", list);
+    info += ")";
+    QMessageBox msbox(QMessageBox::Critical, "Exposure Status", info);
+    msbox.exec();
+  }
+
+  setEditable(true);
 }
 
 int ExposureTab::make_command(char *buffer) {
@@ -412,6 +469,8 @@ void ExposureTab::createGui() {
   m_server_status = new QLineEdit;
   m_server_time = new QLineEdit;
   m_image_nr = new QLineEdit;
+  m_elt = new QLineEdit;
+  m_series_elt = new QLineEdit;
 
   m_label = new QLabel;
   m_label->setFrameStyle(QFrame::Box | QFrame::Plain);
@@ -422,9 +481,11 @@ void ExposureTab::createGui() {
   m_start_button->setEnabled(true);
   m_cancel_button->setEnabled(false);
 
-  // the progress bar
+  // the progress bars
   m_prog_bar = new QProgressBar;
   m_prog_bar->setRange(0, 100);
+  m_series_prog_bar = new QProgressBar;
+  m_series_prog_bar->setRange(0, 100);
 
   // group server response
   QGroupBox *server_gbox = new QGroupBox(tr("Server Status"));
@@ -437,7 +498,18 @@ void ExposureTab::createGui() {
   server_layout->addWidget(m_server_time, 2, 1, 1, 2);
   server_layout->addWidget(new QLabel(tr("Image nr")), 3, 0, 1, 2);
   server_layout->addWidget(m_image_nr, 3, 1);
-  server_layout->addWidget(m_prog_bar, 4, 0, 1, 3);
+  server_layout->addWidget(new QLabel(tr("Elapsed Time (image)")), 4, 0);
+  server_layout->addWidget(m_elt, 4, 1);
+  server_layout->addWidget(new QLabel(tr("sec")), 4, 2);
+  server_layout->addWidget(new QLabel(tr("Elapsed Time (series)")), 5, 0);
+  server_layout->addWidget(m_series_elt, 5, 1);
+  server_layout->addWidget(new QLabel(tr("sec")), 5, 2);
+  server_layout->addWidget(new QLabel(tr("Current Exposure Progress")), 6, 0, 1,
+                           2);
+  server_layout->addWidget(m_prog_bar, 7, 0, 2, 3);
+  server_layout->addWidget(new QLabel(tr("Series Exposure Progress")), 9, 0, 1,
+                           2);
+  server_layout->addWidget(m_series_prog_bar, 10, 0, 2, 3);
   server_gbox->setLayout(server_layout);
 
   /* group binning options */
