@@ -48,10 +48,8 @@ void ExposureTab::set_exposure() {
     return;
 
     // send command to deamon
-#ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
-#endif
   (*csock)->send(buffer);
 
   // start listening thread for server info

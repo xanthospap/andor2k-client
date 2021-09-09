@@ -11,10 +11,7 @@ SOURCES += \
     advancedsettings.cpp \
     connectiontab.cpp \
     exposuretab.cpp \
-    temperaturetab.cpp \
-    statustab.cpp \
     tabdialog.cpp \
-    exposurestatusdialog.cpp \
     main.cpp \
 
 HEADERS += \
@@ -24,9 +21,6 @@ HEADERS += \
     imagethread.h \
     connectiontab.h \
     exposuretab.h \
-    temperaturetab.h \
-    statustab.h \
-    exposurestatusdialog.h \
     tabdialog.h
 
 unix|win32: LIBS += -landor
