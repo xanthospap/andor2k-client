@@ -50,6 +50,7 @@ private:
   QLineEdit *m_series_elt;
   QProgressBar *m_prog_bar;
   QProgressBar *m_series_prog_bar;
+  QPushButton *m_clear_button;
 
   QHBoxLayout *main_layout;
 
@@ -59,6 +60,8 @@ signals:
 
 private slots:
   void set_exposure();
+  void clearlogs();
+  void send_abort();
   void serverJobDone(const QString &);
   void serverJobUpdate(const QString &);
 };

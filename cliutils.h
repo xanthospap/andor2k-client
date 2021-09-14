@@ -19,6 +19,13 @@ inline auto get_val(const char *key, const QStringList &list) {
   return QString(" ");
 }
 
+inline auto list_has_error(const QStringList &list) {
+  bool converted;
+  int error = get_val("error", list).toInt(&converted);
+  if (converted && error) return error;
+  return 0;
+}
+
 inline auto get_username_or(const char *uname) noexcept {
   char usern[32];
   QString user;

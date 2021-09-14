@@ -8,23 +8,37 @@
 #include <QThread>
 #include <cstdio>
 #include <cstring>
+#include <QWidget>
+#include <exception>
 
 class ImageThread : public QThread {
   Q_OBJECT
 
 public:
-  explicit ImageThread(andor2k::ClientSocket *sock) : socket(sock){};
+  explicit ImageThread(andor2k::ClientSocket *sock, QWidget* widg) : socket(sock), widget(widg){};
 
 private:
   andor2k::ClientSocket *socket;
+  QWidget *widget;
 
   void run() override {
     QStringList list;
     QString val;
     char buffer[1024];
 
+    /*
+    try {
+      andor2k::ClientSocket client_socket("127.0.0.1", 8081);
+      std::strcpy(buffer, "Hallo from parallel world!\n");
+      client_socket.send(buffer);
+    } catch (std::exception& e) {
+      printf("<%s> exception caught: %s\n", __func__, e.what());
+    }
+    */
+
     // set cursor to waiting mode
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    // QApplication::setOverrideCursor(Qt::WaitCursor);
+    // widget->setEnabled(false);
 
     // keep updating menu while server responds
     bool server_done = false;
@@ -45,7 +59,8 @@ private:
     }
 
     // unset waiting mode on cursor
-    QApplication::restoreOverrideCursor();
+    // QApplication::restoreOverrideCursor();
+    // widget->setEnabled(true);
 
     // emit resultReady signal
     emit resultReady(QString(buffer));

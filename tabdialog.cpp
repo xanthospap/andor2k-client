@@ -2,8 +2,6 @@
 #include "advancedsettings.h"
 #include "connectiontab.h"
 #include "exposuretab.h"
-//#include "statustab.h"
-//#include "temperaturetab.h"
 #include <QVBoxLayout>
 
 TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent)
@@ -15,8 +13,6 @@ TabDialog::TabDialog(andor2k::ClientSocket *&sock_pt, QWidget *parent)
   m_tabWidget = new QTabWidget;
   m_tabWidget->addTab(new ConnectionTab(sock_pt), tr("Connection"));
   m_tabWidget->addTab(new ExposureTab(sock_pt), tr("Exposures"));
-  // m_tabWidget->addTab(new TemperatureTab(sock_pt, buffer), tr("Temperature"));
-  // m_tabWidget->addTab(new StatusTab(sock_pt, buffer), tr("Status"));
   m_tabWidget->addTab(new AdvancedSettings(sock_pt), tr("Advanced Settings"));
 
   QVBoxLayout *mainLayout = new QVBoxLayout;

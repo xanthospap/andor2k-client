@@ -1,6 +1,5 @@
 #include "exposuretab.h"
 #include "cliutils.h"
-#include "exposurestatusdialog.h"
 #include "imagethread.h"
 #include <QApplication>
 #include <QGroupBox>
@@ -18,6 +17,10 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
   csock = &csocket;
 
   connect(m_start_button, SIGNAL(clicked()), this, SLOT(set_exposure()));
+  
+  connect(m_clear_button, SIGNAL(clicked()), this, SLOT(clearlogs()));
+  
+  connect(m_cancel_button, SIGNAL(clicked()), this, SLOT(send_abort()));
 
   connect(m_type_cbox, QOverload<int>::of(&QComboBox::currentIndexChanged),
           [=](int index) {
@@ -35,7 +38,25 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
   });
 }
 
+void ExposureTab::send_abort() {
+  // check that the connection/socket is alive
+  if (*csock == nullptr) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Cannot send command to daemon! Need to connect first");
+    msbox.exec();
+    return;
+  }
+  
+  printf("---> sending abort signal <---\n");
+
+  std::strcpy(buffer, "abort");
+  (*csock)->send(buffer);
+}
+
 void ExposureTab::set_exposure() {
+  // clear previous logs (if any)
+  clearlogs();
+
   // check that the connection/socket is alive
   if (*csock == nullptr) {
     QMessageBox msbox(QMessageBox::Critical, "Connection Error",
@@ -52,8 +73,11 @@ void ExposureTab::set_exposure() {
          buffer);
   (*csock)->send(buffer);
 
+  // we should now be able to click the abort button
+  m_cancel_button->setEnabled(true);
+
   // start listening thread for server info
-  ImageThread *ithread = new ImageThread(*csock);
+  ImageThread *ithread = new ImageThread(*csock, this);
 
   connect(ithread, &ImageThread::resultReady, this,
           &ExposureTab::serverJobDone);
@@ -63,11 +87,13 @@ void ExposureTab::set_exposure() {
 
   ithread->start();
 
+  // m_cancel_button->setEnabled(false);
+  m_clear_button->setEnabled(false);
   return;
 }
 
 void ExposureTab::serverJobUpdate(const QString &response) {
-  printf("--> get string from server: [%s] <---\n",
+  printf("--> got string from server: [%s] <---\n",
          response.toStdString().c_str());
   QStringList list(split_command(response));
   QString val(64, ' '), empty(" ");
@@ -137,9 +163,8 @@ void ExposureTab::serverJobDone(const QString &response) {
 
   // get the exit status
   QStringList list(split_command(response));
-  bool converted;
-  int error = get_val("error", list).toInt(&converted);
-  if (converted && !error) {
+  int error = list_has_error(list);
+  if (!error) {
     QMessageBox msbox(QMessageBox::Information, "Exposure Status",
                       "All done! Exposure ended");
     m_prog_bar->setValue(100);
@@ -342,6 +367,17 @@ void ExposureTab::setEditable(bool editable) {
   m_filter_name->setEnabled(editable);
 }
 
+void ExposureTab::clearlogs() {
+  m_server_info->setText("");
+  m_server_status->setText("");
+  m_server_time->setText("");
+  m_image_nr->setText("");
+  m_elt->setText("");
+  m_series_elt->setText("");
+  m_prog_bar->setValue(0);
+  m_series_prog_bar->setValue(0);
+}
+
 void ExposureTab::createGui() {
   m_filename_ledit = new QLineEdit;
   m_exposure_ledit = new QLineEdit;
@@ -474,10 +510,12 @@ void ExposureTab::createGui() {
   m_label->setFrameStyle(QFrame::Box | QFrame::Plain);
 
   // Buttons
-  m_cancel_button = new QPushButton("Cancel", this);
+  m_cancel_button = new QPushButton("Abort", this);
   m_start_button = new QPushButton("Start", this);
+  m_clear_button = new QPushButton("Clear", this);
   m_start_button->setEnabled(true);
   m_cancel_button->setEnabled(false);
+  m_clear_button->setEnabled(false);
 
   // the progress bars
   m_prog_bar = new QProgressBar;
@@ -508,6 +546,7 @@ void ExposureTab::createGui() {
   server_layout->addWidget(new QLabel(tr("Series Exposure Progress")), 9, 0, 1,
                            2);
   server_layout->addWidget(m_series_prog_bar, 10, 0, 2, 3);
+  server_layout->addWidget(m_clear_button, 11, 0, 1, 3);
   server_gbox->setLayout(server_layout);
 
   /* group binning options */
