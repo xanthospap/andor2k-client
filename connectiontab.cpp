@@ -11,6 +11,9 @@
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
+std::string ghost;
+int gport_no;
+
 ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
 #ifdef DEBUG
@@ -25,6 +28,7 @@ ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
   connect(m_connect_button, SIGNAL(clicked()), this, SLOT(sock_connect()));
   connect(m_defaults_button, SIGNAL(clicked()), this, SLOT(reset_defaults()));
   connect(m_disconnect_button, SIGNAL(clicked()), this, SLOT(disconnect()));
+  connect(m_update_button, SIGNAL(clicked()), this, SLOT(get_status()));
   connect(m_shutdown_button, SIGNAL(clicked()), this, SLOT(shutdown_daemon()));
 
 #ifdef DEBUG
@@ -96,6 +100,9 @@ void ConnectionTab::createGui() {
   m_shutdown_button = new QPushButton("Shutdown Daemon");
   m_shutdown_button->setEnabled(false);
 
+  m_update_button = new QPushButton("Update Status");
+  m_update_button->setEnabled(false);
+
   // group connection options
   QGroupBox *con_gbox = new QGroupBox(tr("Connection Options"));
   QGridLayout *con_layout = new QGridLayout;
@@ -108,7 +115,7 @@ void ConnectionTab::createGui() {
   // group startup options
   QGroupBox *init_gbox = new QGroupBox(tr("Initialization Options"));
   QGridLayout *init_layout = new QGridLayout;
-  init_layout->addWidget(new QLabel(tr("Target Temperature st StartUp")), 0, 0);
+  init_layout->addWidget(new QLabel(tr("Target Temperature at StartUp")), 0, 0);
   init_layout->addWidget(m_init_temp, 0, 1);
   init_layout->addWidget(new QLabel(tr("deg C.")), 0, 2);
   init_layout->addWidget(new QLabel(tr("Observer Name")), 1, 0);
@@ -125,27 +132,35 @@ void ConnectionTab::createGui() {
   // group server response status
   QGroupBox *server_gbox = new QGroupBox(tr("Server Status"));
   QGridLayout *server_layout = new QGridLayout;
-  server_layout->addWidget(new QLabel(tr("Connection Status")), 0, 0);
-  server_layout->addWidget(m_con_status, 0, 1, 1, 2);
-  server_layout->addWidget(new QLabel(tr("ANDOR2K Temperature (deg C)")), 1, 0,
-                           1, 2);
-  server_layout->addWidget(m_temp_c, 1, 2);
-  server_layout->addWidget(new QLabel(tr("ANDOR2K Status")), 2, 0);
-  server_layout->addWidget(m_server_info, 2, 1, 1, 2);
-  server_layout->addWidget(new QLabel(tr("Last Response Time")), 3, 0);
-  server_layout->addWidget(m_time, 3, 1, 1, 2);
+  server_layout->addWidget(new QLabel(tr("Connection Status")), 0, 0, 2, 1);
+  server_layout->addWidget(m_con_status, 1, 0, 2, 1);
+  server_layout->addWidget(new QLabel(tr("ANDOR2K Temperature (deg C)")), 2, 0,
+                           2, 1);
+  server_layout->addWidget(m_temp_c, 3, 0, 2, 1);
+  server_layout->addWidget(new QLabel(tr("ANDOR2K Status")), 4, 0, 2, 1);
+  server_layout->addWidget(m_server_info, 5, 0, 2, 1);
+  server_layout->addWidget(new QLabel(tr("Last Response Time")), 6, 0, 2, 1);
+  server_layout->addWidget(m_time, 7, 0, 2, 1);
   server_gbox->setLayout(server_layout);
 
+  // right side of panle; contains information (line) edits and update button
+  QVBoxLayout *server_side = new QVBoxLayout;
+  server_side->addWidget(server_gbox);
+  server_side->addWidget(m_update_button);
+
+  // left side of panel; contains connection info, and intitialization defaults
   QVBoxLayout *v_options_layout = new QVBoxLayout;
-  v_options_layout = new QVBoxLayout;
+  // v_options_layout = new QVBoxLayout;
   v_options_layout->addWidget(con_gbox);
   v_options_layout->addWidget(init_gbox);
   v_options_layout->addLayout(h_button_layout);
 
+  // combine right and left sides to a single window
   QHBoxLayout *hb_layout = new QHBoxLayout;
-  hb_layout->addLayout(v_options_layout);
-  hb_layout->addWidget(server_gbox);
+  hb_layout->addLayout(v_options_layout, 1);
+  hb_layout->addLayout(server_side, 3);
 
+  // combine window (right/left) and shutdown button
   v_main_layout = new QVBoxLayout;
   v_main_layout->addLayout(hb_layout);
   v_main_layout->addWidget(m_shutdown_button);
@@ -190,6 +205,7 @@ void ConnectionTab::serverJobDone() {
   m_connect_button->setEnabled(false);
   m_disconnect_button->setEnabled(true);
   m_shutdown_button->setEnabled(true);
+  m_update_button->setEnabled(true);
 }
 
 void ConnectionTab::setEditable() {
@@ -197,6 +213,7 @@ void ConnectionTab::setEditable() {
   m_port_ledit->setEnabled(true);
   m_init_temp->setEnabled(true);
   m_observer->setEnabled(true);
+  m_update_button->setEnabled(true);
 }
 
 void ConnectionTab::setUnEditable() {
@@ -204,6 +221,72 @@ void ConnectionTab::setUnEditable() {
   m_port_ledit->setEnabled(false);
   m_init_temp->setEnabled(false);
   m_observer->setEnabled(false);
+  m_update_button->setEnabled(false);
+}
+
+void ConnectionTab::get_status() {
+
+  // waiting for an answer of type:
+  // 'status:IDLE; waiting for instructions;temp: +18 (Temperature is off);time:2021-10-05 12:54:01;'
+  
+  if (*csock == nullptr) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Cannot send command to daemon! Need to connect first");
+    msbox.exec();
+    return;
+  }
+  
+  // send 'status' command and resolve back answer
+  std::memset(buffer, 0, 1024);
+  std::strcpy(buffer, "status");
+  if ((*csock)->send(buffer)<1) {
+#ifdef DEBUG
+    printf(">> failed to send status command to deamon!\n");
+#endif
+    return;
+  }
+#ifdef DEBUG
+  printf(">> client sent command %s\n", buffer);
+#endif
+  
+  std::memset(buffer, 0, 1024);
+  if ((*csock)->recv(buffer, 1024)<1) {
+#ifdef DEBUG
+    printf(">> failed to get back answer from deamon for status\n");
+#endif
+    return;
+  }
+#ifdef DEBUG
+  printf(">> client received answer [%s]\n", buffer);
+#endif
+
+  QString val(64, ' '), empty(" ");
+  QStringList list(split_command(buffer));
+  val = get_val("status", list);
+  if (val != empty) {
+    m_server_info->setText(val);
+    m_server_info->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_server_info->setStyleSheet("QLabel { color: grey; }");
+  }
+  
+  val = get_val("temp", list);
+  if (val != empty) {
+    m_temp_c->setText(val);
+    m_temp_c->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_temp_c->setStyleSheet("QLabel { color: grey; }");
+  }
+  
+  val = get_val("time", list);
+  if (val != empty) {
+    m_time->setText(val);
+    m_time->setStyleSheet("QLabel { color: black; }");
+  } else {
+    m_time->setStyleSheet("QLabel { color: grey; }");
+  }
+
+  return;
 }
 
 void ConnectionTab::sock_connect() {
@@ -219,6 +302,8 @@ void ConnectionTab::sock_connect() {
   std::string host = m_hostname_ledit->text().toStdString();
   try {
     *csock = new ClientSocket(host.c_str(), m_port_ledit->text().toInt());
+    ghost = host;
+    gport_no = m_port_ledit->text().toInt();
   } catch (std::exception &e) {
     *csock = nullptr;
     QMessageBox messageBox(QMessageBox::Critical, "Connection Error",
@@ -226,10 +311,14 @@ void ConnectionTab::sock_connect() {
     messageBox.exec();
     return;
   }
+  
+  // get the status, aka send 'status' and resolve answer
+  get_status();
 
   m_connect_button->setEnabled(false);
   m_disconnect_button->setEnabled(true);
   m_shutdown_button->setEnabled(true);
+  m_update_button->setEnabled(true);
   m_con_status->setText("connected");
 
   // send_settemp(); RUN
@@ -259,6 +348,7 @@ void ConnectionTab::disconnect() {
   m_connect_button->setEnabled(true);
   m_disconnect_button->setEnabled(false);
   m_shutdown_button->setEnabled(false);
+  m_update_button->setEnabled(false);
   m_con_status->setText("not connected");
 }
 

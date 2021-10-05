@@ -10,6 +10,9 @@
 using andor2k::ClientSocket;
 using andor2k::Socket;
 
+extern std::string ghost;
+extern int gport_no;
+
 ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
     : QWidget(parent) {
   createGui();
@@ -39,18 +42,27 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
 }
 
 void ExposureTab::send_abort() {
-  // check that the connection/socket is alive
-  if (*csock == nullptr) {
-    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
-                      "Cannot send command to daemon! Need to connect first");
-    msbox.exec();
+  // try opening a new socket, at theoretically a listening port to send 
+  // command
+  printf(">> trying to send abort signal\n");
+  int aport = gport_no + 1;
+  try {
+    ClientSocket abort_sock(ghost.c_str(), aport);
+    printf(">> connected to %s:%d\n", ghost.c_str(), aport);
+    char buf[32] = {'\0'};
+    std::strcpy(buf, "abort");
+    printf("---> sending abort signal <---\n");
+    if (abort_sock.send(buffer)<1)
+      printf(">> failed sending abort signal to server!\n");
+  } catch (std::exception &e) {
+    char erbuf[128];
+    std::sprintf(erbuf, "Could not connect to abort listening port %s:%d", ghost.c_str(), aport);
+    QMessageBox messageBox(QMessageBox::Critical, "Connection Error", QString(erbuf));
+    messageBox.exec();
     return;
   }
   
-  printf("---> sending abort signal <---\n");
-
-  std::strcpy(buffer, "abort");
-  (*csock)->send(buffer);
+  return;
 }
 
 void ExposureTab::set_exposure() {
@@ -68,9 +80,11 @@ void ExposureTab::set_exposure() {
   if (this->make_command(this->buffer))
     return;
 
-    // send command to deamon
+  // send command to deamon
+#ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
          buffer);
+#endif
   (*csock)->send(buffer);
 
   // we should now be able to click the abort button
@@ -93,8 +107,10 @@ void ExposureTab::set_exposure() {
 }
 
 void ExposureTab::serverJobUpdate(const QString &response) {
+#ifdef DEBUG
   printf("--> got string from server: [%s] <---\n",
          response.toStdString().c_str());
+#endif
   QStringList list(split_command(response));
   QString val(64, ' '), empty(" ");
   bool converted;
@@ -173,7 +189,8 @@ void ExposureTab::serverJobDone(const QString &response) {
   } else {
     QString info("Exposure ended (status:");
     info += get_val("error", list);
-    info += ")";
+    info += ")\n";
+    info += get_val("status", list);
     QMessageBox msbox(QMessageBox::Critical, "Exposure Status", info);
     msbox.exec();
   }
@@ -346,10 +363,12 @@ int ExposureTab::make_command(char *buffer) {
   std::strcpy(buffer + idx, tval.c_str());
   idx = std::strlen(buffer);
 
-  // printf("[DEBUG][ANDOR2K::client::%15s] Sending command to daemon: [%s]\n",
-  // __func__, buffer);
+#ifdef DEBUG
+  //printf("[DEBUG][ANDOR2K::client::%15s] Sending command to daemon: [%s]\n",
+  //__func__, buffer);
   printf("[DEBUG][ANDOR2K::client::%15s] Command size: %d\n", __func__,
          (int)std::strlen(buffer));
+#endif
   return 0;
 }
 
@@ -391,7 +410,7 @@ void ExposureTab::createGui() {
   m_obj_name = new QLineEdit;
   m_filter_name = new QLineEdit;
 
-  /* options for NumImages edit */
+  // options for NumImages edit
   QRegularExpression rx_ni("[0-9]{1,3}");
   QValidator *validator_ni = new QRegularExpressionValidator(rx_ni, this);
   m_nimages_ledit->setValidator(validator_ni);
@@ -399,7 +418,7 @@ void ExposureTab::createGui() {
       "Number of images/exposures to be performed in run.");
   m_nimages_ledit->setText("1");
 
-  /* options for Filename edit */
+  // options for Filename edit
   QRegularExpression rx_fn(
       "[a-zA-Z0-9.]{1,127}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_fn = new QRegularExpressionValidator(rx_fn, this);
@@ -411,7 +430,7 @@ void ExposureTab::createGui() {
       "starting from 1");
   m_filename_ledit->setText("img");
 
-  /* options for Exposure edit */
+  // options for Exposure edit
   QRegularExpression rx_ex(
       "[0-9.]{1,10}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_ex = new QRegularExpressionValidator(rx_ex, this);
@@ -419,7 +438,7 @@ void ExposureTab::createGui() {
   m_exposure_ledit->setToolTip("Exposure time in seconds, as float value.");
   m_exposure_ledit->setText("0.5");
 
-  /* options for Vertical Binning edit */
+  // options for Vertical Binning edit
   QRegularExpression rx_vbn(
       "[0-9]{1,3}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_vbn = new QRegularExpressionValidator(rx_vbn, this);
@@ -427,7 +446,7 @@ void ExposureTab::createGui() {
   m_vbin_ledit->setToolTip("Vertical binning, as integer value.");
   m_vbin_ledit->setText("1");
 
-  /* options for Horizontal Binning edit */
+  // options for Horizontal Binning edit
   QRegularExpression rx_hbn(
       "[0-9]{1,3}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_hbn = new QRegularExpressionValidator(rx_hbn, this);
@@ -435,7 +454,7 @@ void ExposureTab::createGui() {
   m_hbin_ledit->setToolTip("Horizontal binning, as integer value.");
   m_hbin_ledit->setText("1");
 
-  /* options for Vertical Start Pixel edit */
+  // options for Vertical Start Pixel edit
   QRegularExpression rx_vstart(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_vstart =
@@ -445,7 +464,7 @@ void ExposureTab::createGui() {
       "Vertical start pixel (inclusive); integer in range [1, 2048]");
   m_vstart_pix->setText("1");
 
-  /* options for Vertical End Pixel edit */
+  // options for Vertical End Pixel edit
   QRegularExpression rx_vend(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_vend = new QRegularExpressionValidator(rx_vend, this);
@@ -454,7 +473,7 @@ void ExposureTab::createGui() {
       "Vertical end pixel (inclusive); integer in range [1, 2048]");
   m_vend_pix->setText("2048");
 
-  /* options for Horizontal Start Pixel edit */
+  // options for Horizontal Start Pixel edit
   QRegularExpression rx_hstart(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_hstart =
@@ -464,7 +483,7 @@ void ExposureTab::createGui() {
       "Horizontal start pixel (inclusive); integer in range [1, 2048]");
   m_hstart_pix->setText("1");
 
-  /* options for Horizontal End Pixel edit */
+  // options for Horizontal End Pixel edit
   QRegularExpression rx_hend(
       "[0-9]{1,4}"); /* only allow integers in range [-999, 999] */
   QValidator *validator_hend = new QRegularExpressionValidator(rx_hend, this);
@@ -478,7 +497,7 @@ void ExposureTab::createGui() {
   m_filter_name->setToolTip("Name of filter applied for the exposure(s)");
   m_filter_name->setMaxLength(15);
 
-  /* options for aristarchos header fetch tries */
+  // options for aristarchos header fetch tries
   QRegularExpression rx_telt("[0-9]{1,2}");
   QValidator *validator_telt = new QRegularExpressionValidator(rx_telt, this);
   m_tel_tries = new QLineEdit;
@@ -488,12 +507,12 @@ void ExposureTab::createGui() {
   m_tel_tries->setText("3");
   m_tel_tries->setEnabled(false);
 
-  /* checkbox for fetching (or not) aristarchos headers */
+  // checkbox for fetching (or not) aristarchos headers
   m_tel_cb = new QCheckBox("Fetch Aristarchos Headers", this);
   m_tel_cb->setChecked(false);
   m_tel_cb->setLayoutDirection(Qt::RightToLeft);
 
-  /* Options for Type edit */
+  // Options for Type edit
   QStringList types = {"flat", "object", "bias", "dark"};
   m_type_cbox = new QComboBox(this);
   m_type_cbox->addItems(types);
@@ -549,7 +568,7 @@ void ExposureTab::createGui() {
   server_layout->addWidget(m_clear_button, 11, 0, 1, 3);
   server_gbox->setLayout(server_layout);
 
-  /* group binning options */
+  // group binning options 
   QGroupBox *bin_gbox = new QGroupBox(tr("Binning Options"));
   QGridLayout *bin_layout = new QGridLayout;
   bin_layout->addWidget(new QLabel(tr("Vertical")), 0, 0);
@@ -558,7 +577,7 @@ void ExposureTab::createGui() {
   bin_layout->addWidget(m_hbin_ledit, 1, 1);
   bin_gbox->setLayout(bin_layout);
 
-  /* group image dimensions options */
+  // group image dimensions options
   QGroupBox *pix_gbox = new QGroupBox(tr("Image Dimensions"));
   QGridLayout *pix_layout = new QGridLayout;
   pix_layout->addWidget(new QLabel(tr("Vertical")), 0, 1);
@@ -573,7 +592,7 @@ void ExposureTab::createGui() {
   pix_layout->addWidget(m_hend_pix, 1, 5);
   pix_gbox->setLayout(pix_layout);
 
-  /* group general options */
+  // group general options
   QGroupBox *gen_gbox = new QGroupBox(tr("General Options"));
   QGridLayout *gen_layout = new QGridLayout;
   gen_layout->addWidget(new QLabel(tr("Filename:")), 0, 0);
@@ -590,7 +609,7 @@ void ExposureTab::createGui() {
   gen_layout->addWidget(m_filter_name, 5, 1);
   gen_gbox->setLayout(gen_layout);
 
-  /* group aristarchos options */
+  // group aristarchos options
   QGroupBox *tel_gbox = new QGroupBox(tr("Aristarchos Options"));
   QGridLayout *tel_layout = new QGridLayout;
   tel_layout->addWidget(m_tel_cb, 0, 0);
@@ -598,7 +617,7 @@ void ExposureTab::createGui() {
   tel_layout->addWidget(m_tel_tries, 0, 2);
   tel_gbox->setLayout(tel_layout);
 
-  /* group buttons */
+  // group buttons
   QHBoxLayout *btn_hbox = new QHBoxLayout;
   btn_hbox->addWidget(m_start_button);
   btn_hbox->addWidget(m_cancel_button);

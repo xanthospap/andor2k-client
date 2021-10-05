@@ -5,6 +5,7 @@
 #include <cstring>
 #include <unistd.h>
 
+// split a string into (string) parts, using ';' as delimeter
 inline auto split_command(const QString &response) noexcept {
   return response.split(';');
 }
