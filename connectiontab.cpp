@@ -114,9 +114,9 @@ void ConnectionTab::createGui() {
   // group startup options
   QGroupBox *init_gbox = new QGroupBox(tr("Initialization Options"));
   QGridLayout *init_layout = new QGridLayout;
-  init_layout->addWidget(new QLabel(tr("Target Temperature at StartUp")), 0, 0);
-  init_layout->addWidget(m_init_temp, 0, 1);
-  init_layout->addWidget(new QLabel(tr("deg C.")), 0, 2);
+  // init_layout->addWidget(new QLabel(tr("Target Temperature at StartUp")), 0, 0);
+  // init_layout->addWidget(m_init_temp, 0, 1);
+  // init_layout->addWidget(new QLabel(tr("deg C.")), 0, 2);
   init_layout->addWidget(new QLabel(tr("Observer Name")), 1, 0);
   init_layout->addWidget(m_observer, 1, 1, 1, 2);
   init_gbox->setLayout(init_layout);
@@ -166,6 +166,7 @@ void ConnectionTab::createGui() {
 
   setUnEditable(); // options are uneditable
 }
+
 /*
 void ConnectionTab::send_settemp() {
   if (*csock == nullptr) {
@@ -207,6 +208,7 @@ void ConnectionTab::serverJobDone() {
   m_update_button->setEnabled(true);
 }
 */
+
 void ConnectionTab::setEditable() {
   m_hostname_ledit->setEnabled(true);
   m_port_ledit->setEnabled(true);
@@ -220,7 +222,7 @@ void ConnectionTab::setUnEditable() {
   m_port_ledit->setEnabled(false);
   m_init_temp->setEnabled(false);
   m_observer->setEnabled(false);
-  m_update_button->setEnabled(false);
+  // m_update_button->setEnabled(false);
 }
 
 void ConnectionTab::get_status() {
@@ -336,6 +338,7 @@ void ConnectionTab::reset_defaults() {
   m_hostname_ledit->setText("localhost");
   m_port_ledit->setText("8080");
   m_init_temp->setText("-90");
+  m_observer->setText(get_username_or("andor2k"));
   // m_defaults_button->setEnabled(false);
   setUnEditable();
 }

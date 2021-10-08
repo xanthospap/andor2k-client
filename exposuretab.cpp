@@ -374,7 +374,11 @@ int ExposureTab::make_command(char *buffer) {
 
 void ExposureTab::setEditable(bool editable) {
   m_filename_ledit->setEnabled(editable);
-  m_exposure_ledit->setEnabled(editable);
+  if (m_type_cbox->currentIndex() == 2) {
+    m_exposure_ledit->setEnabled(false);
+  } else {
+    m_exposure_ledit->setEnabled(editable);
+  }
   m_nimages_ledit->setEnabled(editable);
   m_vbin_ledit->setEnabled(editable);
   m_hbin_ledit->setEnabled(editable);
