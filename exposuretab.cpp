@@ -444,7 +444,7 @@ void ExposureTab::createGui() {
   QValidator *validator_vbn = new QRegularExpressionValidator(rx_vbn, this);
   m_vbin_ledit->setValidator(validator_vbn);
   m_vbin_ledit->setToolTip("Vertical binning, as integer value.");
-  m_vbin_ledit->setText("1");
+  m_vbin_ledit->setText("2");
 
   // options for Horizontal Binning edit
   QRegularExpression rx_hbn(
@@ -452,7 +452,7 @@ void ExposureTab::createGui() {
   QValidator *validator_hbn = new QRegularExpressionValidator(rx_hbn, this);
   m_hbin_ledit->setValidator(validator_hbn);
   m_hbin_ledit->setToolTip("Horizontal binning, as integer value.");
-  m_hbin_ledit->setText("1");
+  m_hbin_ledit->setText("2");
 
   // options for Vertical Start Pixel edit
   QRegularExpression rx_vstart(

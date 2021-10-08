@@ -1,7 +1,6 @@
 #include "connectiontab.h"
 #include "cliutils.h"
 #include "helmos-andor2k/cpp_socket.hpp"
-#include "settempthread.h"
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QRegularExpressionValidator>
@@ -167,7 +166,7 @@ void ConnectionTab::createGui() {
 
   setUnEditable(); // options are uneditable
 }
-
+/*
 void ConnectionTab::send_settemp() {
   if (*csock == nullptr) {
     QMessageBox msbox(QMessageBox::Critical, "Connection Error",
@@ -207,7 +206,7 @@ void ConnectionTab::serverJobDone() {
   m_shutdown_button->setEnabled(true);
   m_update_button->setEnabled(true);
 }
-
+*/
 void ConnectionTab::setEditable() {
   m_hostname_ledit->setEnabled(true);
   m_port_ledit->setEnabled(true);

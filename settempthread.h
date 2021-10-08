@@ -8,22 +8,27 @@
 #include <QThread>
 #include <cstdio>
 #include <cstring>
+#include <QWidget>
+#include <exception>
 
-class setTempThread : public QThread {
+class SetTempThread : public QThread {
   Q_OBJECT
 
 public:
-  explicit setTempThread(andor2k::ClientSocket *sock) : socket(sock){};
+  explicit SetTempThread(andor2k::ClientSocket *sock, QWidget* widg) : socket(sock), widget(widg) {};
 
 private:
   andor2k::ClientSocket *socket;
+  QWidget *widget;
 
   void run() override {
     QStringList list;
     QString val;
     char buffer[1024];
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    // set to waiting mode ...
+    //QApplication::setOverrideCursor(Qt::WaitCursor);
+ 
     // keep updating menu while server responds
     bool server_done = false;
     while (!server_done) {
@@ -46,7 +51,7 @@ private:
       }
     }
 
-    QApplication::restoreOverrideCursor();
+    //QApplication::restoreOverrideCursor();
     emit resultReady();
   }
 

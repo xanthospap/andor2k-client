@@ -40,7 +40,7 @@ private:
   QVBoxLayout *v_main_layout;
 
   void createGui();
-  void send_settemp();
+  //void send_settemp();
   void setEditable();
   void setUnEditable();
 
@@ -53,8 +53,8 @@ private slots:
   void make_editable();
   void disconnect();
   void shutdown_daemon();
-  void serverJobDone();
-  void serverJobUpdate(const QString &);
+  //void serverJobDone();
+  //void serverJobUpdate(const QString &);
 };
 
 #endif // CONNECTIONTAB_H
