@@ -6,6 +6,7 @@
 #include <QRegularExpressionValidator>
 #include <QThread>
 #include <cstring>
+#include "helmos-andor2k/andor2k.hpp"
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -29,6 +30,7 @@ ConnectionTab::ConnectionTab(ClientSocket *&csocket, QWidget *parent)
   connect(m_disconnect_button, SIGNAL(clicked()), this, SLOT(disconnect()));
   connect(m_update_button, SIGNAL(clicked()), this, SLOT(get_status()));
   connect(m_shutdown_button, SIGNAL(clicked()), this, SLOT(shutdown_daemon()));
+  connect(m_update_observer_button, SIGNAL(clicked()), this, SLOT(send_observer_update_command()));
 
 #ifdef DEBUG
   printf("[DEBUG][ANDOR2K::client::%15s] ConnectionTab Socket at %p -> %p",
@@ -101,6 +103,9 @@ void ConnectionTab::createGui() {
 
   m_update_button = new QPushButton("Update Status");
   m_update_button->setEnabled(false);
+  
+  m_update_observer_button = new QPushButton("Set");
+  m_update_observer_button->setEnabled(true);
 
   // group connection options
   QGroupBox *con_gbox = new QGroupBox(tr("Connection Options"));
@@ -119,6 +124,7 @@ void ConnectionTab::createGui() {
   // init_layout->addWidget(new QLabel(tr("deg C.")), 0, 2);
   init_layout->addWidget(new QLabel(tr("Observer Name")), 1, 0);
   init_layout->addWidget(m_observer, 1, 1, 1, 2);
+  init_layout->addWidget(m_update_observer_button, 2, 1);
   init_gbox->setLayout(init_layout);
 
   // group buttons
@@ -209,11 +215,52 @@ void ConnectionTab::serverJobDone() {
 }
 */
 
+int ConnectionTab::make_observername_command(char *buffer) {
+  auto qsname = m_observer->text();
+  std::string sname = qsname.toStdString();
+  if (sname.size() >= 31) {
+      QMessageBox msbox(QMessageBox::Critical, "Parameter Error",
+                        "Observer Name can have a maximum of 31 characters length");
+      m_observer->setText(QString("andor2k"));
+      msbox.exec();
+      return 1;
+  }
+
+  // char buffer[MAX_SOCKET_BUFFER_SIZE];
+  std::memset(buffer, 0, MAX_SOCKET_BUFFER_SIZE);
+  int sz = std::sprintf(buffer, "setparam observername=%s", sname.c_str());
+  return !(sz > 0);
+}
+
+void ConnectionTab::send_observer_update_command() {
+  // check that the connection/socket is alive
+  if (*csock == nullptr) {
+    QMessageBox msbox(QMessageBox::Critical, "Connection Error",
+                      "Cannot send command to daemon! Need to connect first");
+    msbox.exec();
+    return;
+  }
+
+  // write the command to be sent to the buffer
+  char buffer[MAX_SOCKET_BUFFER_SIZE];
+  if (make_observername_command(buffer)) return;
+
+  // send command to deamon
+#ifdef DEBUG
+  printf("[DEBUG][ANDOR2K::client::%15s] sending command: \"%s\"\n", __func__,
+         buffer);
+#endif
+  printf("--> parameter command: [%s] <--\n", buffer);
+  (*csock)->send(buffer);
+
+  return;
+}
+
 void ConnectionTab::setEditable() {
   m_hostname_ledit->setEnabled(true);
   m_port_ledit->setEnabled(true);
   m_init_temp->setEnabled(true);
-  m_observer->setEnabled(true);
+  // m_observer->setEnabled(true);
   m_update_button->setEnabled(true);
 }
 
@@ -221,7 +268,7 @@ void ConnectionTab::setUnEditable() {
   m_hostname_ledit->setEnabled(false);
   m_port_ledit->setEnabled(false);
   m_init_temp->setEnabled(false);
-  m_observer->setEnabled(false);
+  // m_observer->setEnabled(false);
   // m_update_button->setEnabled(false);
 }
 
