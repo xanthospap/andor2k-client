@@ -42,6 +42,13 @@ ExposureTab::ExposureTab(ClientSocket *&csocket, QWidget *parent)
 }
 
 void ExposureTab::send_abort() {
+  // Do you really want to quit ? ....
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Abort Exposure Confirmation", "Are you sure you want to abort exposure ?",
+                                QMessageBox::Yes|QMessageBox::No);
+  // no-opt, user does not want to quit!
+  if (reply == QMessageBox::No) return;
+
   // try opening a new socket, at theoretically a listening port to send 
   // command
   printf(">> trying to send abort signal\n");
@@ -513,7 +520,7 @@ void ExposureTab::createGui() {
 
   // checkbox for fetching (or not) aristarchos headers
   m_tel_cb = new QCheckBox("Fetch Aristarchos Headers", this);
-  m_tel_cb->setChecked(false);
+  m_tel_cb->setChecked(/*false*/true);
   m_tel_cb->setLayoutDirection(Qt::RightToLeft);
 
   // Options for Type edit
