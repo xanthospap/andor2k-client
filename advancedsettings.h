@@ -19,6 +19,7 @@ private:
   int make_acquisition_command(char *buffer);
   int make_speed_command(char *buffer);
   int make_temp_command(char *buffer);
+  int make_preampgain_command(char *buffer);
   int check_socket();
   int send_command(const char *command);
   void createGui();
@@ -40,10 +41,13 @@ private:
   //QComboBox *m_vspeed_edit;
   QComboBox *m_hspeed_edit;
 
+  QComboBox *m_ampgain_edit;
+
   QVBoxLayout *main_layout;
   QPushButton *m_set_btn;
   QPushButton *m_settmp_btn;
   QPushButton *m_setspeed_btn;
+  QPushButton *m_ampgain_btn;
 
 signals:
 
@@ -51,6 +55,7 @@ private slots:
   void send_acquisition_command();
   void send_temperature_command();
   void send_speed_command();
+  void send_preampgain_command();
   void serverJobDone(const QString &);
   void serverJobUpdate(const QString &);
 };

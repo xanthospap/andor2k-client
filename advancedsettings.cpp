@@ -67,6 +67,28 @@ int AdvancedSettings::make_speed_command(char *buffer) {
   return 0;
 }
 
+int AdvancedSettings::make_preampgain_command(char *buffer) {
+  auto pagainstr = m_ampgain_edit->currentText();
+  int index;
+  if (pagainstr == "1x") {
+    index = 0;
+  } else if (pagainstr == "2x") {
+    index = 1;
+  } else if (pagainstr == "4x") {
+    index = 2;
+  } else {
+    QMessageBox msbox(QMessageBox::Critical, "Parameter Error",
+                      "Failed to translate pre-amp gain to valid option");
+    msbox.exec();
+    return 1;
+  }
+
+  std::memset(buffer, 0, MAX_SOCKET_BUFFER_SIZE);
+  std::sprintf(buffer, "setparam preampgain=%d", index);
+
+  return 0;
+}
+
 int AdvancedSettings::make_acquisition_command(char *buffer) {
 
   auto smode = m_acquisition_mode->currentText();
@@ -150,6 +172,25 @@ void AdvancedSettings::send_speed_command() {
   // write the command to be sent to the buffer
   char buffer[MAX_SOCKET_BUFFER_SIZE];
   if (make_speed_command(buffer))
+    return;
+
+  // send command to deamon
+  printf("Will send command to daemon: [%s]\n", buffer);
+  /*int sent_bts = */ send_command(buffer);
+
+  return;
+}
+
+void AdvancedSettings::send_preampgain_command() {
+  // is the socket ok?
+  if (check_socket()) {
+    // printf("No socket found but keeping on to show command to send\n");
+    return;
+  }
+
+  // write the command to be sent to the buffer
+  char buffer[MAX_SOCKET_BUFFER_SIZE];
+  if (make_preampgain_command(buffer))
     return;
 
   // send command to deamon
@@ -255,6 +296,7 @@ AdvancedSettings::AdvancedSettings(ClientSocket *&csocket, QWidget *parent)
 
   connect(m_set_btn, SIGNAL(clicked()), this, SLOT(send_acquisition_command()));
   connect(m_setspeed_btn, SIGNAL(clicked()), this, SLOT(send_speed_command()));
+  connect(m_ampgain_btn, SIGNAL(clicked()), this, SLOT(send_preampgain_command()));
   connect(m_settmp_btn, SIGNAL(clicked()), this,
           SLOT(send_temperature_command()));
 
@@ -304,25 +346,38 @@ void AdvancedSettings::createGui() {
   // m_temp_et->setEnabled(false);
 
   // QStringList vspeed_types = {"38.550", "76.950", "Fastest Recommended"};
-  QStringList hspeed_types = {"5.00MHz","3.00MHz","1.00MHz","0.05MHz"};
+  QStringList hspeed_types = {/*"5.00MHz",*/"3.00MHz","1.00MHz","0.05MHz"};
   m_hspeed_edit = new QComboBox;
   m_hspeed_edit->setToolTip(
       "Set the speed at which the pixels are shifted into the output node "
       "during the readout phase of an acquisition");
   m_hspeed_edit->addItems(hspeed_types);
-  m_hspeed_edit->setCurrentIndex(1);
+  // WARNING we will be leaving out the first option here, so index = +1 (not 0)
+  m_hspeed_edit->setCurrentIndex(0);
   // m_vspeed_edit = new QComboBox;
   // m_vspeed_edit->setToolTip(
   //    "Set the vertical speed to be used for subsequent acquisitions");
   // m_vspeed_edit->setEnabled(false);
   // m_vspeed_edit->addItems(vspeed_types);
-  QGroupBox *speed_gbox = new QGroupBox(tr("Acquisition Speed"));
+  QGroupBox *speed_gbox = new QGroupBox(tr("Read-Out Mode"));
   QGridLayout *speed_layout = new QGridLayout;
   speed_layout->addWidget(new QLabel(tr("Horizontal")), 0, 0);
   speed_layout->addWidget(m_hspeed_edit, 0, 1);
   // speed_layout->addWidget(new QLabel(tr("Vertical")), 1, 0);
   // speed_layout->addWidget(m_vspeed_edit, 1, 1);
   speed_gbox->setLayout(speed_layout);
+  
+  QStringList ampgain_factors = {"1x", "2x", "4x"};
+  m_ampgain_edit = new QComboBox;
+  m_ampgain_edit->setToolTip(
+      "Set the pre amp gain to be used for subsequent acquisitions");
+  m_ampgain_edit->addItems(ampgain_factors);
+  m_ampgain_edit->setCurrentIndex(1);
+  QGroupBox *ampgain_gbox = new QGroupBox(tr("Gain"));
+  QGridLayout *ampgain_layout = new QGridLayout;
+  ampgain_layout->addWidget(new QLabel(tr("Factor")), 0, 0);
+  ampgain_layout->addWidget(m_ampgain_edit, 0, 1);
+  ampgain_gbox->setLayout(ampgain_layout);
 
   QGroupBox *temp_gbox = new QGroupBox(tr("Camera Temperature"));
   QGridLayout *temp_layout = new QGridLayout;
@@ -340,6 +395,7 @@ void AdvancedSettings::createGui() {
   m_set_btn = new QPushButton("Set", this);
   m_settmp_btn = new QPushButton("Set", this);
   m_setspeed_btn = new QPushButton("Set", this);
+  m_ampgain_btn = new QPushButton("Set", this);
 
   main_layout = new QVBoxLayout;
   main_layout->addWidget(acquisition_gbox);
@@ -348,6 +404,8 @@ void AdvancedSettings::createGui() {
   main_layout->addWidget(m_settmp_btn);
   main_layout->addWidget(speed_gbox);
   main_layout->addWidget(m_setspeed_btn);
+  main_layout->addWidget(ampgain_gbox);
+  main_layout->addWidget(m_ampgain_btn);
 
   return;
 }
